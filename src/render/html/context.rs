@@ -18,30 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-//! Module for HTML context objects.
-//!
-//! [`HtmlOutput`] is used externally and is the final result of rendering.
-//! [`HtmlContext`] is used internally to store the internal state during rendering.
-//!
-//! [`HtmlOutput`]: ./HtmlOutput.html
-//! [`HtmlContext`]: ./HtmlContext.html
+//! Internal state object used during rendering.
 
 use crate::{ArticleHandle, Result};
 use std::collections::HashSet;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
+use super::HtmlOutput;
 
-#[derive(Debug, Clone, Default)]
-pub struct HtmlOutput {
-    pub html: String,
-    pub styles: Vec<String>,
-}
-
+#[derive(Clone)]
 pub struct HtmlContext {
     pub html: String,
     pub styles: Vec<String>,
-    pub has_footnotes: bool,
-    pub has_footnote_block: bool,
+    write_mode: WriteMode,
+    footnotes: FootnoteContext,
     id: u64,
     handle: Arc<ArticleHandle>,
 }
@@ -51,8 +41,8 @@ impl HtmlContext {
         HtmlContext {
             html: String::new(),
             styles: Vec::new(),
-            has_footnotes: false,
-            has_footnote_block: false,
+            write_mode: WriteMode::Html,
+            footnotes: FootnoteContext::default(),
             handle,
             id,
         }
@@ -70,15 +60,46 @@ impl HtmlContext {
         Arc::clone(&self.handle)
     }
 
+    #[inline]
+    pub fn footnotes(&self) -> &FootnoteContext {
+        &self.footnotes
+    }
+
+    #[inline]
+    pub fn footnotes_mut(&mut self) -> &mut FootnoteContext {
+        &mut self.footnotes
+    }
+
     // Buffer management
+    fn buffer(&mut self) -> &mut String {
+        match self.write_mode {
+            WriteMode::Html => &mut self.html,
+            WriteMode::FootnoteBlock => self.footnotes.buffer_mut(),
+        }
+    }
+
+    #[inline]
+    pub fn insert_str(&mut self, idx: usize, s: &str) {
+        self.buffer().insert_str(idx, s);
+    }
+
     #[inline]
     pub fn push(&mut self, ch: char) {
-        self.html.push(ch);
+        self.buffer().push(ch);
     }
 
     #[inline]
     pub fn push_str(&mut self, s: &str) {
-        self.html.push_str(s);
+        self.buffer().push_str(s);
+    }
+
+    pub fn write_footnote_block<F>(&mut self, f: F) -> Result<()>
+        where F: FnOnce(&mut Self) -> Result<()>
+    {
+        self.write_mode = WriteMode::FootnoteBlock;
+        let result = f(self);
+        self.write_mode = WriteMode::Html;
+        result
     }
 
     // External calls
@@ -112,10 +133,56 @@ impl Debug for HtmlContext {
         f.debug_struct("HtmlContext")
             .field("html", &self.html)
             .field("styles", &self.styles)
-            .field("has_footnotes", &self.has_footnotes)
-            .field("has_footnote_block", &self.has_footnote_block)
+            .field("footnotes", &self.footnotes)
             .field("id", &self.id)
             .field("handle", &"Arc<dyn ArticleHandle>")
             .finish()
     }
+}
+
+// Helper structs
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct FootnoteContext {
+    buffer: String,
+    has_block: bool,
+    count: u32,
+}
+
+impl FootnoteContext {
+    #[inline]
+    pub fn has_block(&self) -> bool {
+        self.has_block
+    }
+
+    #[inline]
+    pub fn set_block(&mut self, value: bool) {
+        self.has_block = value;
+    }
+
+    #[inline]
+    pub fn has_footnotes(&self) -> bool {
+        self.count > 0
+    }
+
+    #[inline]
+    pub fn incr(&mut self) -> u32 {
+        self.count += 1;
+        self.count
+    }
+
+    #[inline]
+    pub fn needs_render(&self) -> bool {
+        self.count > 0 && !self.has_block
+    }
+
+    #[inline]
+    fn buffer_mut(&mut self) -> &mut String {
+        &mut self.buffer
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum WriteMode {
+    Html,
+    FootnoteBlock,
 }

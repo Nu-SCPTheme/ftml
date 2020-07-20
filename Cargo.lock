@@ -643,9 +643,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53953d2d3a5ad81d9f844a32f14ebb121f50b650cd59d0ee2a07cf13c617efed"
+checksum = "d0c66c837702a84de9d981636d14d15194cd8573ea158229ddb5c766692ef6af"
 
 [[package]]
 name = "typenum"

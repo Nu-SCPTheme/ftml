@@ -1,5 +1,5 @@
 /*
- * (FILENAME)
+ * data/mod.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,3 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+mod image_alignment;
+mod page_info;
+
+pub use self::image_alignment::*;
+pub use self::page_info::*;

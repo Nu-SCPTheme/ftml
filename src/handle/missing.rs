@@ -1,5 +1,5 @@
 /*
- * handle/null.rs
+ * handle/missing.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -20,30 +20,39 @@
 
 use super::prelude::*;
 
-/// Handle implementation where all included pages are blank.
+/// Handle implementation where all pages are considered missing.
 #[derive(Debug, Copy, Clone)]
-pub struct NullHandle;
+pub struct MissingHandle;
 
-impl Handle for NullHandle {
+impl Handle for MissingHandle {
     #[inline]
     fn include_page(
         &self,
         _name: &str,
         _args: &HashMap<&str, &str>,
     ) -> Result<Option<String>, String> {
-        Ok(Some(str!("")))
+        Ok(None)
     }
 
-    #[inline]
     fn include_missing_error(&self, name: &str) -> String {
-        // Wikitext is {{name}}, but we need to escape it.
-        // So it's '{{' '{{' '{}' '}}' '}}'
-        // meaning "literal {", "literal {", name, "literal }", "literal }".
-        format!("No such page: '{{{{{}}}}}'", name)
+        format!(
+            "
+[[div class=\"error-block\"]]
+Included page \"{}\" does not exist ([[a href=\"/{}/edit\"]]created it now[[/a]])
+[[/div]]
+",
+            name, name
+        )
     }
 
-    #[inline]
     fn include_max_depth_error(&self, max_depth: usize) -> String {
-        format!("Too many layers of includes: max depth is {}", max_depth)
+        format!(
+            "
+[[div class=\"error-block\"]]
+Too many nested includes. (Maximum depth is {})
+[[/div]]
+",
+            max_depth
+        )
     }
 }

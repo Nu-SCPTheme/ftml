@@ -1,5 +1,5 @@
 /*
- * handle/null.rs
+ * handle/debug.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -20,30 +20,26 @@
 
 use super::prelude::*;
 
-/// Handle implementation where all included pages are blank.
+/// Test handle for debugging.
 #[derive(Debug, Copy, Clone)]
-pub struct NullHandle;
+pub struct DebugHandle;
 
-impl Handle for NullHandle {
-    #[inline]
+impl Handle for DebugHandle {
     fn include_page(
         &self,
-        _name: &str,
-        _args: &HashMap<&str, &str>,
+        name: &str,
+        args: &HashMap<&str, &str>,
     ) -> Result<Option<String>, String> {
-        Ok(Some(str!("")))
+        let include = format!("<PAGE '{}' {:?}>", name, args);
+
+        Ok(Some(include))
     }
 
-    #[inline]
-    fn include_missing_error(&self, name: &str) -> String {
-        // Wikitext is {{name}}, but we need to escape it.
-        // So it's '{{' '{{' '{}' '}}' '}}'
-        // meaning "literal {", "literal {", name, "literal }", "literal }".
-        format!("No such page: '{{{{{}}}}}'", name)
+    fn include_missing_error(&self, _name: &str) -> String {
+        unreachable!()
     }
 
-    #[inline]
-    fn include_max_depth_error(&self, max_depth: usize) -> String {
-        format!("Too many layers of includes: max depth is {}", max_depth)
+    fn include_max_depth_error(&self, _max_depth: usize) -> String {
+        unreachable!()
     }
 }

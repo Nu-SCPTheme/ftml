@@ -8,34 +8,28 @@ keywords = ["wikidot", "ftml", "parsing", "rendering", "html"]
 categories = []
 exclude = [".gitignore", ".travis.yml"]
 
-version = "0.2.19"
+version = "0.2.20"
 authors = ["Ammon Smith <ammon.i.smith@gmail.com>"]
 edition = "2018" # this refers to the Cargo.toml version
 
 [badges]
 travis-ci = { repository = "Nu-SCPTheme/ftml", branch = "master" }
 
-[workspace]
-members = [
-    ".",
-    "ftml-bin",
-]
-
 [lib]
 name = "ftml"
 
 [dependencies]
-chrono = "0.4"
-either = "1.5"
+enum-map = "0.6"
 lazy_static = "1"
-log = "0.4"
-percent-encoding = "2"
-pest = "2.1"
-pest_derive = "2.1"
+pest = "2"
+pest_derive = "2"
 regex = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_repr = "0.1"
+slog = "2.5"
 str-macro = "0.1"
-thiserror = "1"
+strum = "0.19"
+strum_macros = "0.19"
 tinyvec = "1"
+
+[dev-dependencies]
+sloggers = "1"
+slog-bunyan = "2"

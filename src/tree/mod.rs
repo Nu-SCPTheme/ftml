@@ -1,5 +1,5 @@
 /*
- * (FILENAME)
+ * tree/mod.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,3 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+mod container;
+mod element;
+
+pub use self::container::*;
+pub use self::element::*;
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct SyntaxTree<'a> {
+    pub elements: Vec<Element<'a>>,
+}

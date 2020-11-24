@@ -1,7 +1,7 @@
 /*
  * lib.rs
  *
- * ftml - Convert Wikidot code to HTML
+ * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,56 +21,19 @@
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
 
-//! A library to convert Wikidot text source into HTML.
+//! A library to parse Wikidot text and produce an abstract syntax tree (AST).
 //!
 //! This library aims to be a replacement of Wikidot's Text_Wiki
-//! module, but with the goals of providing more modular integration
-//! and standalone servicing.
-//!
-//! While backwards compatibility with Wikidot code is one of the aims
-//! of this library, there are constructions which are valid in Wikidot
-//! but deliberately invalid in ftml. The total scope of all Wikidot code
-//! that is valid would almost require a parser nearly identical to the one
-//! attempting to be rewritten to cover every edge case, even if supporting
-//! such a case is not very useful or sensible.
-//!
-//! For instance, the following is valid code:
-//! ```text
-//! > [[div class="test"]
-//! > A man, a plan, a canal, Panama.
-//! [[/div]]
-//! ```
-//!
-//! However the actual extent of the blockquote intersects with the div, and
-//! it essentially is the HTML equivalent of
-//! ```text
-//! <div class="outer">
-//!   <p class="inner">
-//!   </div>
-//! </p>
-//! ```
-//!
-//! Which is obviously invalid syntax, and can cause issues.
-//!
-//! Instead the library's parser defines a grammar, which is designed to be
-//! compatible with all common Wikidot constructions, or has extensions for
-//! situations that are not directly supported. This largely-overlapping but
-//! slightly dissimilar specification ("ftml code") aims at being able to
-//! _effectively_ replace Wikidot code with minor human involvement to
-//! replace malformed original sources.
-//!
-//! This crate also provides an executable to convert files from
-//! the command-line. See that file for usage documentation.
+//! parser, which is presently a loose group of regular expressions
+//! (with irregular Perl extensions). The aim is to provide an AST
+//! while also maintaining the flexibility and lax parsing that
+//! Wikidot permits.
 
-extern crate chrono;
-extern crate either;
+#[macro_use]
+extern crate enum_map;
 
 #[macro_use]
 extern crate lazy_static;
-
-#[macro_use]
-extern crate log;
-extern crate percent_encoding;
 extern crate pest;
 
 #[macro_use]
@@ -78,54 +41,70 @@ extern crate pest_derive;
 extern crate regex;
 
 #[macro_use]
-extern crate serde;
-
-#[macro_use]
-extern crate serde_repr;
+extern crate slog;
 
 #[macro_use]
 extern crate str_macro;
-
-#[macro_use]
-extern crate thiserror;
-
-#[macro_use]
-extern crate tinyvec;
+extern crate strum;
+extern crate strum_macros;
 
 #[cfg(test)]
-extern crate serde_json;
+extern crate slog_bunyan;
 
-#[macro_use]
-mod macros;
+#[cfg(test)]
+extern crate sloggers;
 
 pub mod data;
-mod enums;
-mod error;
-mod filter;
 pub mod handle;
-mod info;
+pub mod tree;
+
+mod enums;
 mod parse;
-mod render;
+mod preproc;
 
-#[cfg(test)]
-mod test;
-
-pub use self::error::{Error, RemoteError};
-pub use self::filter::prefilter;
-pub use self::handle::RemoteHandle;
-pub use self::info::{PageInfo, PageInfoOwned};
-pub use self::parse::{parse, ImageArguments, Paragraph, SyntaxTree, Word};
-pub use self::render::html;
-pub use self::render::{HtmlRender, Render, TreeRender};
+pub use self::handle::Handle;
+pub use self::parse::parse;
+pub use self::preproc::preprocess;
 
 pub mod prelude {
-    pub use super::{data, handle, parse, prefilter};
-    pub use super::{
-        Error, HtmlRender, PageInfo, PageInfoOwned, Render, Result, StdResult, SyntaxTree,
-        TreeRender,
-    };
+    pub use super::tree::{Element, Elements, SyntaxTree};
+    pub use super::{data, handle, parse, preprocess};
 }
 
-pub type StdResult<T, E> = std::result::Result<T, E>;
-pub type Result<T> = StdResult<T, Error>;
-pub type RemoteResult<T> = StdResult<T, RemoteError>;
+#[cfg(test)]
+#[inline]
+fn build_logger() -> slog::Logger {
+    build_console_logger()
+}
+
+#[cfg(test)]
+#[allow(dead_code)]
+fn build_console_logger() -> slog::Logger {
+    use sloggers::terminal::TerminalLoggerBuilder;
+    use sloggers::types::Severity;
+    use sloggers::Build;
+
+    TerminalLoggerBuilder::new()
+        .level(Severity::Trace)
+        .build()
+        .expect("Unable to initialize logger")
+}
+
+#[cfg(test)]
+#[allow(dead_code)]
+fn build_json_logger() -> slog::Logger {
+    use slog::Drain;
+    use std::io;
+    use std::sync::Mutex;
+
+    // For writing to a file:
+    // + .add_default_keys()
+    // + .set_pretty(false)
+    let drain = slog_bunyan::with_name("ftml", io::stdout())
+        .set_newlines(true)
+        .set_pretty(true)
+        .set_flush(true)
+        .build();
+
+    slog::Logger::root(Mutex::new(drain).fuse(), o!("env" => "test"))
+}

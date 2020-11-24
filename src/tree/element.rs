@@ -1,5 +1,5 @@
 /*
- * (FILENAME)
+ * tree/element.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,3 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use super::Container;
+
+pub type Elements<'a> = Vec<Element<'a>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Element<'a> {
+    Container(Container<'a>),
+    Text(&'a str),
+    Email(&'a str),
+    Link {
+        label: Option<&'a str>,
+        url: &'a str,
+    },
+    LineBreak,
+    HorizontalRule,
+    Null,
+}

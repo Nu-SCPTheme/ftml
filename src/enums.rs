@@ -1,7 +1,7 @@
 /*
  * enums.rs
  *
- * ftml - Convert Wikidot code to HTML
+ * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::StdResult;
-use std::convert::TryFrom;
-use std::fmt::{self, Display};
+// TODO use enums
+#![allow(dead_code)]
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+use std::convert::TryFrom;
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum Alignment {
     Left,
     Right,
@@ -31,21 +31,10 @@ pub enum Alignment {
     Justify,
 }
 
-impl Alignment {
-    pub fn style(self) -> &'static str {
-        match self {
-            Alignment::Left => "left",
-            Alignment::Right => "right",
-            Alignment::Center => "center",
-            Alignment::Justify => "justify",
-        }
-    }
-}
-
 impl<'a> TryFrom<&'a str> for Alignment {
     type Error = ();
 
-    fn try_from(value: &'a str) -> StdResult<Self, Self::Error> {
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         match value {
             "<" => Ok(Alignment::Left),
             ">" => Ok(Alignment::Right),
@@ -56,36 +45,29 @@ impl<'a> TryFrom<&'a str> for Alignment {
     }
 }
 
-impl Display for Alignment {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.style())
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum AnchorTarget {
+    /// Open the link in a new tab.
+    /// HTML attribute is `_blank`.
     NewTab,
-    Parent,
-    Top,
-    Same,
-}
 
-impl AnchorTarget {
-    pub fn style(self) -> &'static str {
-        match self {
-            AnchorTarget::NewTab => "_blank",
-            AnchorTarget::Parent => "_parent",
-            AnchorTarget::Top => "_top",
-            AnchorTarget::Same => "_self",
-        }
-    }
+    /// Open the link in the parent frame.
+    /// HTML attribute is `_parent`.
+    Parent,
+
+    /// Open the link in the top-most frame.
+    /// HTML attribute is `_top`.
+    Top,
+
+    /// Open the link in the current frame.
+    /// HTML attribute is `_self`.
+    Same,
 }
 
 impl<'a> TryFrom<&'a str> for AnchorTarget {
     type Error = ();
 
-    fn try_from(value: &'a str) -> StdResult<Self, Self::Error> {
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         const ANCHOR_TARGET_VALUES: [(&str, &str, AnchorTarget); 4] = [
             ("blank", "_blank", AnchorTarget::NewTab),
             ("parent", "_parent", AnchorTarget::Parent),
@@ -103,14 +85,7 @@ impl<'a> TryFrom<&'a str> for AnchorTarget {
     }
 }
 
-impl Display for AnchorTarget {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.style())
-    }
-}
-
-#[derive(Serialize_repr, Deserialize_repr, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[repr(u8)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum HeadingLevel {
     One = 1,
     Two = 2,
@@ -123,7 +98,7 @@ pub enum HeadingLevel {
 impl TryFrom<usize> for HeadingLevel {
     type Error = ();
 
-    fn try_from(value: usize) -> StdResult<Self, Self::Error> {
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(HeadingLevel::One),
             2 => Ok(HeadingLevel::Two),
@@ -138,7 +113,7 @@ impl TryFrom<usize> for HeadingLevel {
 impl TryFrom<u8> for HeadingLevel {
     type Error = ();
 
-    fn try_from(value: u8) -> StdResult<Self, Self::Error> {
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(HeadingLevel::One),
             2 => Ok(HeadingLevel::Two),
@@ -164,52 +139,20 @@ impl Into<u8> for HeadingLevel {
     }
 }
 
-impl Display for HeadingLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let level = *self;
-        let value: u8 = level.into();
-
-        write!(f, "h{}", value)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum LinkText<'a> {
     Text(&'a str),
     Url,
     Article,
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum ListStyle {
     Bullet,
     Numbered,
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
-pub enum HtmlMetaType {
-    Name,
-    HttpEquiv,
-    Property,
-}
-
-impl HtmlMetaType {
-    pub fn tag_name(self) -> &'static str {
-        use self::HtmlMetaType::*;
-
-        match self {
-            Name => "name",
-            HttpEquiv => "http-equiv",
-            Property => "property",
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum InfoField {
     Title,
     AltTitle,

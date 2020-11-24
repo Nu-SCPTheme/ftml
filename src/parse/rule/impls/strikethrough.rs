@@ -1,5 +1,5 @@
 /*
- * (FILENAME)
+ * parse/rule/impls/strikethrough.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,3 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use super::prelude::*;
+
+pub const RULE_STRIKETHROUGH: Rule = make_rule!("strikethrough", try_consume);
+
+fn try_consume<'a>(
+    log: &slog::Logger,
+    _extract: &ExtractedToken<'a>,
+    _next: &[ExtractedToken<'a>],
+) -> Option<RuleResult<'a>> {
+    trace!(log, "Attempting to create container for strikethrough");
+
+    todo!()
+}

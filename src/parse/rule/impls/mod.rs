@@ -27,9 +27,8 @@ mod prelude {
     pub use crate::tree::{Container, ContainerType, Element};
 }
 
-// TODO add remaining rules
-
 mod bold;
+mod comment;
 mod email;
 mod fallback;
 mod line_break;
@@ -38,6 +37,7 @@ mod text;
 mod url;
 
 pub use self::bold::RULE_BOLD;
+pub use self::comment::RULE_COMMENT;
 pub use self::email::RULE_EMAIL;
 pub use self::fallback::RULE_FALLBACK;
 pub use self::line_break::RULE_LINE_BREAK;

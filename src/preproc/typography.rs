@@ -74,16 +74,33 @@ lazy_static! {
     };
 }
 
+/// Helper struct to easily perform string replacements.
 #[derive(Debug)]
 pub enum Replacer {
+    /// Replaces one static string for another static string.
     StrReplace {
         pattern: &'static str,
         replacement: &'static str,
     },
+
+    /// Replaces any text matching the regular expression with the static string.
+    /// The entire match is used, any capture groups are ignored.
     RegexReplace {
         regex: Regex,
         replacement: &'static str,
     },
+
+    /// Takes text matching the regular expression, and replaces the exterior.
+    ///
+    /// The regular expression must return the content to be preserved in
+    /// capture group 1, and surrounds it with the `begin` and `end` strings.
+    ///
+    /// For instance, say:
+    /// * `regex` matched `[% (.+) %]`
+    /// * `begin` was `<(`
+    /// * `end` was `)>`
+    ///
+    /// Then input string `[% wikidork %]` would become `<(wikidork)>`.
     RegexSurround {
         regex: Regex,
         begin: &'static str,
@@ -100,7 +117,7 @@ impl Replacer {
                 pattern,
                 replacement,
             } => {
-                trace!(
+                debug!(
                     log,
                     "Running static string replacement";
                     "type" => "string",
@@ -117,7 +134,7 @@ impl Replacer {
                 ref regex,
                 replacement,
             } => {
-                trace!(
+                debug!(
                     log,
                     "Running regular expression replacement";
                     "type" => "regex",
@@ -126,10 +143,13 @@ impl Replacer {
                 );
 
                 while let Some(capture) = regex.captures(text) {
-                    let mtch = capture
-                        .get(0)
-                        .expect("Regular expression lacks a full match");
-                    let range = mtch.start()..mtch.end();
+                    let range = {
+                        let mtch = capture
+                            .get(0)
+                            .expect("Regular expression lacks a full match");
+
+                        mtch.start()..mtch.end()
+                    };
 
                     text.replace_range(range, replacement);
                 }
@@ -139,7 +159,7 @@ impl Replacer {
                 begin,
                 end,
             } => {
-                trace!(
+                debug!(
                     log,
                     "Running regular expression capture replacement";
                     "type" => "surround",

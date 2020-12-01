@@ -18,9 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-mod include;
-mod misc;
 mod typography;
+mod whitespace;
 
 #[cfg(test)]
 mod test;
@@ -33,7 +32,6 @@ mod test;
 /// * Trimming whitespace lines
 /// * Concatenating lines that end with backslashes
 /// * Convert tabs to four spaces
-/// * Compress groups of 3+ newlines into 2 newlines
 /// * Wikidot typography transformations
 ///
 /// This call always succeeds. The return value designates where issues occurred
@@ -41,7 +39,7 @@ mod test;
 pub fn preprocess(log: &slog::Logger, text: &mut String) {
     let log = &log.new(slog_o!("function" => "preprocess", "text" => str!(text)));
 
-    misc::substitute(log, text);
+    whitespace::substitute(log, text);
     typography::substitute(log, text);
 
     info!(log, "Finished preprocessing of text"; "text" => &*text);
@@ -51,6 +49,6 @@ pub fn preprocess(log: &slog::Logger, text: &mut String) {
 fn fn_type() {
     type SubstituteFn = fn(&slog::Logger, &mut String);
 
-    let _: SubstituteFn = misc::substitute;
+    let _: SubstituteFn = whitespace::substitute;
     let _: SubstituteFn = typography::substitute;
 }

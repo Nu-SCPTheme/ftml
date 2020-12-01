@@ -50,7 +50,7 @@ impl Rule {
         extract: &'r ExtractedToken<'t>,
         remaining: &'r [ExtractedToken<'t>],
     ) -> Consumption<'r, 't> {
-        info!(log, "Trying to consume for parse rule '{}'", self.name);
+        info!(log, "Trying to consume for parse rule"; "name" => self.name);
 
         (self.try_consume_fn)(log, extract, remaining)
     }
@@ -141,6 +141,6 @@ where
 /// The function type for actually trying to consume tokens
 pub type TryConsumeFn = for<'t, 'r> fn(
     log: &slog::Logger,
-    extract: &'r ExtractedToken<'t>,
+    extracted: &'r ExtractedToken<'t>,
     remaining: &'r [ExtractedToken<'t>],
 ) -> Consumption<'t, 'r>;

@@ -55,13 +55,13 @@ where
     let mut output = ParseResult::default();
 
     while !tokens.is_empty() {
-        // Consume tokens to get next element
+        // Consume tokens to produce the next element
         let Consumption { result, error } = {
-            let (extracted, next) = tokens
+            let (extracted, remaining) = tokens
                 .split_first() //
                 .expect("Tokens list is empty");
 
-            consume(log, extracted, next)
+            consume(log, extracted, remaining)
         };
 
         match result {
@@ -104,10 +104,10 @@ where
 
 #[test]
 fn ast() {
-    let logger = crate::build_logger();
+    let log = crate::build_logger();
     let text = "apple [!-- banana --] cherry";
-    let tokens = tokenize(&logger, text);
-    let result = parse(&logger, &tokens);
+    let tokens = tokenize(&log, text);
+    let result = parse(&log, &tokens);
     println!("{:#?}", result.value());
     println!("Errors: {:#?}", result.errors());
 

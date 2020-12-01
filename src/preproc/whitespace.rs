@@ -1,5 +1,5 @@
 /*
- * preproc/misc.rs
+ * preproc/whitespace.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -40,12 +40,6 @@ lazy_static! {
             .build()
             .unwrap()
     };
-    static ref COMPRESS_NEWLINES: Regex = {
-        RegexBuilder::new(r"(?:\n\s*){3,}")
-            .multi_line(true)
-            .build()
-            .unwrap()
-    };
     static ref LEADING_NEWLINES: Regex = Regex::new(r"^\n+").unwrap();
     static ref TRAILING_NEWLINES: Regex = Regex::new(r"\n+$").unwrap();
 }
@@ -64,16 +58,13 @@ pub fn substitute(log: &slog::Logger, text: &mut String) {
     // Tabs to spaces
     str_replace(log, text, "\t", "    ");
 
-    // Compress multiple newlines
-    regex_replace(log, text, &*COMPRESS_NEWLINES, "\n\n");
-
     // Remove leading and trailing newlines
     regex_replace(log, text, &*LEADING_NEWLINES, "");
     regex_replace(log, text, &*TRAILING_NEWLINES, "");
 }
 
 fn str_replace(log: &slog::Logger, text: &mut String, pattern: &str, replacement: &str) {
-    trace!(
+    debug!(
         log,
         "Replacing miscellaneous static string";
         "type" => "string",
@@ -89,7 +80,7 @@ fn str_replace(log: &slog::Logger, text: &mut String, pattern: &str, replacement
 }
 
 fn regex_replace(log: &slog::Logger, text: &mut String, regex: &Regex, replacement: &str) {
-    trace!(
+    debug!(
         log,
         "Replacing miscellaneous regular expression";
         "type" => "regex",
@@ -132,7 +123,6 @@ const TEST_CASES: [(&str, &str); 6] = [
 #[test]
 fn regexes() {
     let _ = &*WHITESPACE;
-    let _ = &*COMPRESS_NEWLINES;
 }
 
 #[test]

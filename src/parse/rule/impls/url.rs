@@ -19,6 +19,7 @@
  */
 
 use super::prelude::*;
+use crate::enums::{AnchorTarget, LinkLabel};
 
 pub const RULE_URL: Rule = Rule {
     name: "url",
@@ -33,8 +34,9 @@ fn try_consume_fn<'t, 'r>(
     debug!(log, "Consuming token as a URL");
 
     let element = Element::Link {
-        label: None,
         url: extract.slice,
+        label: LinkLabel::Url,
+        anchor: AnchorTarget::Same,
     };
 
     Consumption::ok(element, remaining)

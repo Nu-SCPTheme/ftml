@@ -19,13 +19,14 @@
  */
 
 use super::Container;
+use crate::enums::{AnchorTarget, LinkLabel};
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case", tag = "variant", content = "data")]
 pub enum Element<'a> {
     /// An element which contains other elements within it.
     ///
-    /// Examples would include bold, italics, divs, etc.
+    /// Examples would include italics, paragraphs, divs, etc.
     Container(Container<'a>),
 
     /// An element only containing text.
@@ -41,12 +42,14 @@ pub enum Element<'a> {
 
     /// An element linking to a different page.
     ///
-    /// The "url" field is either a page name (relative URL) or full URL.
     /// The "label" field is an optional field denoting what the link should
     /// display. If `None`, use the link's value itself, that is, `label.unwrap_or(url)`.
+    ///
+    /// The "url" field is either a page name (relative URL) or full URL.
     Link {
-        label: Option<&'a str>,
         url: &'a str,
+        label: LinkLabel<'a>,
+        anchor: AnchorTarget,
     },
 
     /// A newline or line break.

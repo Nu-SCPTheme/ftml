@@ -36,7 +36,7 @@ use bencher::Bencher;
 
 #[inline]
 fn build_logger() -> slog::Logger {
-    slog::Logger::root(slog::Discard, o!())
+    slog::Logger::root(slog::Discard, slog::o!())
 }
 
 #[bench]

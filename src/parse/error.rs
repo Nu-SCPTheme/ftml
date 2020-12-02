@@ -46,6 +46,23 @@ impl ParseError {
         }
     }
 
+    /// Raw `ParseError` constructor for tests.
+    #[inline]
+    #[cfg(test)]
+    pub(crate) fn new_raw(
+        token: Token,
+        rule: &'static str,
+        span: Range<usize>,
+        kind: ParseErrorKind,
+    ) -> Self {
+        ParseError {
+            token,
+            rule,
+            span,
+            kind,
+        }
+    }
+
     #[inline]
     pub fn token(&self) -> Token {
         self.token
@@ -75,6 +92,12 @@ pub enum ParseErrorKind {
 
     /// Attempting to match this rule failed, falling back to try an alternate.
     RuleFailed,
+
+    /// Attempting to process this rule failed because the end of input was reached.
+    EndOfInput,
+
+    /// Temporary rule denoting that this syntactical construction isn't implemented yet.
+    NotImplemented,
 
     /// No rules match for these tokens, returning as plain text.
     NoRulesMatch,

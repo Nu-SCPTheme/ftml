@@ -156,9 +156,14 @@ Experiments began 20██/05/10 09:13 and were overseen by Dr. Archibald.
 
 use bencher::Bencher;
 
+#[inline]
+fn build_logger() -> slog::Logger {
+    slog::Logger::root(slog::Discard, o!())
+}
+
 #[bench]
 fn full(bench: &mut Bencher) {
-    let log = slog::Logger::root(slog::Discard, o!());
+    let log = build_logger();
 
     bench.iter(|| {
         let mut text = str!(INPUT);
@@ -175,5 +180,51 @@ fn full(bench: &mut Bencher) {
     });
 }
 
-benchmark_group!(benches, full);
+#[bench]
+fn preprocess(bench: &mut Bencher) {
+    let log = build_logger();
+
+    bench.iter(|| {
+        let mut text = str!(INPUT);
+
+        // Run preprocessor
+        crate::preprocess(&log, &mut text);
+    });
+}
+
+#[bench]
+fn tokenize(bench: &mut Bencher) {
+    let log = build_logger();
+
+    let mut text = str!(INPUT);
+
+    // Run preprocessor
+    crate::preprocess(&log, &mut text);
+
+    bench.iter(|| {
+        // Run lexer
+        let _tokens = crate::tokenize(&log, &text);
+    });
+}
+
+#[bench]
+fn parse(bench: &mut Bencher) {
+    let log = build_logger();
+
+    let mut text = str!(INPUT);
+
+    // Run preprocessor
+    crate::preprocess(&log, &mut text);
+
+    // Run lexer
+    let tokens = crate::tokenize(&log, &text);
+
+    bench.iter(|| {
+        // Run parser
+        let result = crate::parse(&log, &tokens);
+        let (_tree, _errors) = result.into();
+    });
+}
+
+benchmark_group!(benches, full, preprocess, tokenize, parse);
 benchmark_main!(benches);

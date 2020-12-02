@@ -101,7 +101,7 @@ fn parse(bench: &mut Bencher) {
     });
 }
 
-benchmark_group!(benches, full, preprocess, tokenize, parse);
+benchmark_group!(benches, preprocess, tokenize, parse, full);
 benchmark_main!(benches);
 
 // Test Data //

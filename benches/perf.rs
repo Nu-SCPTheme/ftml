@@ -39,7 +39,6 @@ fn build_logger() -> slog::Logger {
     slog::Logger::root(slog::Discard, slog::o!())
 }
 
-#[bench]
 fn full(bench: &mut Bencher) {
     let log = build_logger();
 
@@ -58,7 +57,6 @@ fn full(bench: &mut Bencher) {
     });
 }
 
-#[bench]
 fn preprocess(bench: &mut Bencher) {
     let log = build_logger();
 
@@ -70,7 +68,6 @@ fn preprocess(bench: &mut Bencher) {
     });
 }
 
-#[bench]
 fn tokenize(bench: &mut Bencher) {
     let log = build_logger();
 
@@ -85,7 +82,6 @@ fn tokenize(bench: &mut Bencher) {
     });
 }
 
-#[bench]
 fn parse(bench: &mut Bencher) {
     let log = build_logger();
 

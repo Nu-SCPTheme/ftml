@@ -154,24 +154,26 @@ Experiments began 20██/05/10 09:13 and were overseen by Dr. Archibald.
 [[include component:license-box-end]]
 "#;
 
-#[macro_use]
-extern crate bencher;
-
-use bench::Bencher;
+use bencher::Bencher;
 
 #[bench]
-fn perf(bench: &mut Bencher) {
+fn full(bench: &mut Bencher) {
+    let log = slog::Logger::root(slog::Discard, o!());
+
     bench.iter(|| {
         let mut text = str!(INPUT);
 
         // Run preprocessor
-        crate::preprocess(&slog::Discard, &mut text);
+        crate::preprocess(&log, &mut text);
 
         // Run lexer
-        let tokens = crate::tokenize(&slog::Discard, &text);
+        let tokens = crate::tokenize(&log, &text);
 
         // Run parser
-        let result = crate::parse(&slog::Discard, &tokens);
+        let result = crate::parse(&log, &tokens);
         let (_tree, _errors) = result.into();
     });
 }
+
+benchmark_group!(benches, full);
+benchmark_main!(benches);

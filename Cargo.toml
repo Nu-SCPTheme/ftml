@@ -15,11 +15,6 @@ edition = "2018" # this refers to the Cargo.toml version
 [lib]
 name = "ftml"
 
-[[bench]]
-name = "perf"
-path = "bench.rs"
-harness = false
-
 [dependencies]
 cfg-if = "1"
 enum-map = "0.6"
@@ -36,5 +31,6 @@ strum_macros = "0.20"
 tinyvec = "1"
 
 [dev-dependencies]
+bencher = "*"
 sloggers = "1"
 slog-bunyan = "2"

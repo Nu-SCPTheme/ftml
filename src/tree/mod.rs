@@ -28,16 +28,16 @@ use crate::ParseResult;
 
 #[derive(Serialize, Debug, Default, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-pub struct SyntaxTree<'a> {
-    pub elements: Vec<Element<'a>>,
+pub struct SyntaxTree<'t> {
+    pub elements: Vec<Element<'t>>,
 }
 
-impl<'a> SyntaxTree<'a> {
-    pub fn from_element_result(result: ParseResult<Vec<Element<'a>>>) -> ParseResult<Self> {
+impl<'t> SyntaxTree<'t> {
+    pub(crate) fn from_element_result(result: ParseResult<Vec<Element<'t>>>) -> ParseResult<Self> {
         // Extract values from result
         let (mut elements, errors) = result.into();
 
-        // Clean up element list
+        // Remove null elements
         elements.retain(|e| e != &Element::Null);
 
         // Create final SyntaxTree result

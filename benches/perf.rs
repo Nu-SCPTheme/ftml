@@ -34,13 +34,14 @@ extern crate str_macro;
 
 use bencher::Bencher;
 
-#[inline]
-fn build_logger() -> slog::Logger {
-    slog::Logger::root(slog::Discard, slog::o!())
+macro_rules! build_logger {
+    () => {
+        slog::Logger::root(slog::Discard, slog::o!())
+    };
 }
 
 fn full(bench: &mut Bencher) {
-    let log = build_logger();
+    let log = build_logger!();
 
     bench.iter(|| {
         let mut text = str!(INPUT);
@@ -58,7 +59,7 @@ fn full(bench: &mut Bencher) {
 }
 
 fn preprocess(bench: &mut Bencher) {
-    let log = build_logger();
+    let log = build_logger!();
 
     bench.iter(|| {
         let mut text = str!(INPUT);
@@ -69,7 +70,7 @@ fn preprocess(bench: &mut Bencher) {
 }
 
 fn tokenize(bench: &mut Bencher) {
-    let log = build_logger();
+    let log = build_logger!();
 
     let mut text = str!(INPUT);
 
@@ -83,7 +84,7 @@ fn tokenize(bench: &mut Bencher) {
 }
 
 fn parse(bench: &mut Bencher) {
-    let log = build_logger();
+    let log = build_logger!();
 
     let mut text = str!(INPUT);
 

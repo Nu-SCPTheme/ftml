@@ -29,8 +29,6 @@
 //! while also maintaining the flexibility and lax parsing that
 //! Wikidot permits.
 
-#![allow(soft_unstable)]
-
 #[macro_use]
 extern crate cfg_if;
 
@@ -58,9 +56,6 @@ extern crate strum_macros;
 
 cfg_if! {
     if #[cfg(test)] {
-        #[macro_use]
-        extern crate bencher;
-
         extern crate serde_json;
         extern crate slog_bunyan;
         extern crate sloggers;
@@ -82,9 +77,6 @@ mod preproc;
 mod render;
 mod text;
 mod tokenize;
-
-#[cfg(test)]
-mod bench;
 
 pub mod data;
 pub mod tree;

@@ -1,6 +1,113 @@
-//! Transient module to occassionally utilize to benchmark the library's performance.
+/*
+ * benches/perf.rs
+ *
+ * ftml - Library to parse Wikidot code
+ * Copyright (C) 2019-2020 Ammon Smith
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#![allow(soft_unstable)]
+
+//! Transient file to occassionally utilize to benchmark the library's performance.
 //!
 //! On a separate branch because this Rust feature requires nightly.
+
+#[macro_use]
+extern crate bencher;
+extern crate ftml;
+extern crate slog;
+
+#[macro_use]
+extern crate str_macro;
+
+use bencher::Bencher;
+
+#[inline]
+fn build_logger() -> slog::Logger {
+    slog::Logger::root(slog::Discard, o!())
+}
+
+#[bench]
+fn full(bench: &mut Bencher) {
+    let log = build_logger();
+
+    bench.iter(|| {
+        let mut text = str!(INPUT);
+
+        // Run preprocessor
+        ftml::preprocess(&log, &mut text);
+
+        // Run lexer
+        let tokens = ftml::tokenize(&log, &text);
+
+        // Run parser
+        let result = ftml::parse(&log, &tokens);
+        let (_tree, _errors) = result.into();
+    });
+}
+
+#[bench]
+fn preprocess(bench: &mut Bencher) {
+    let log = build_logger();
+
+    bench.iter(|| {
+        let mut text = str!(INPUT);
+
+        // Run preprocessor
+        ftml::preprocess(&log, &mut text);
+    });
+}
+
+#[bench]
+fn tokenize(bench: &mut Bencher) {
+    let log = build_logger();
+
+    let mut text = str!(INPUT);
+
+    // Run preprocessor
+    ftml::preprocess(&log, &mut text);
+
+    bench.iter(|| {
+        // Run lexer
+        let _tokens = ftml::tokenize(&log, &text);
+    });
+}
+
+#[bench]
+fn parse(bench: &mut Bencher) {
+    let log = build_logger();
+
+    let mut text = str!(INPUT);
+
+    // Run preprocessor
+    ftml::preprocess(&log, &mut text);
+
+    // Run lexer
+    let tokens = ftml::tokenize(&log, &text);
+
+    bench.iter(|| {
+        // Run parser
+        let result = ftml::parse(&log, &tokens);
+        let (_tree, _errors) = result.into();
+    });
+}
+
+benchmark_group!(benches, full, preprocess, tokenize, parse);
+benchmark_main!(benches);
+
+// Test Data //
 
 const INPUT: &str = r#"
 [[include theme:black-highlighter-theme]]
@@ -153,78 +260,3 @@ Experiments began 20██/05/10 09:13 and were overseen by Dr. Archibald.
 =====
 [[include component:license-box-end]]
 "#;
-
-use bencher::Bencher;
-
-#[inline]
-fn build_logger() -> slog::Logger {
-    slog::Logger::root(slog::Discard, o!())
-}
-
-#[bench]
-fn full(bench: &mut Bencher) {
-    let log = build_logger();
-
-    bench.iter(|| {
-        let mut text = str!(INPUT);
-
-        // Run preprocessor
-        crate::preprocess(&log, &mut text);
-
-        // Run lexer
-        let tokens = crate::tokenize(&log, &text);
-
-        // Run parser
-        let result = crate::parse(&log, &tokens);
-        let (_tree, _errors) = result.into();
-    });
-}
-
-#[bench]
-fn preprocess(bench: &mut Bencher) {
-    let log = build_logger();
-
-    bench.iter(|| {
-        let mut text = str!(INPUT);
-
-        // Run preprocessor
-        crate::preprocess(&log, &mut text);
-    });
-}
-
-#[bench]
-fn tokenize(bench: &mut Bencher) {
-    let log = build_logger();
-
-    let mut text = str!(INPUT);
-
-    // Run preprocessor
-    crate::preprocess(&log, &mut text);
-
-    bench.iter(|| {
-        // Run lexer
-        let _tokens = crate::tokenize(&log, &text);
-    });
-}
-
-#[bench]
-fn parse(bench: &mut Bencher) {
-    let log = build_logger();
-
-    let mut text = str!(INPUT);
-
-    // Run preprocessor
-    crate::preprocess(&log, &mut text);
-
-    // Run lexer
-    let tokens = crate::tokenize(&log, &text);
-
-    bench.iter(|| {
-        // Run parser
-        let result = crate::parse(&log, &tokens);
-        let (_tree, _errors) = result.into();
-    });
-}
-
-benchmark_group!(benches, full, preprocess, tokenize, parse);
-benchmark_main!(benches);

@@ -18,46 +18,42 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#[macro_use]
+mod macros;
+
+#[cfg(test)]
+mod test;
+
 mod consume;
 mod error;
 mod result;
 mod rule;
 mod token;
 
-#[cfg(test)]
-mod test;
-
 use self::consume::consume;
-use self::rule::{Consumption, ConsumptionResult};
+use self::rule::Consumption;
+use crate::tokenize::Tokenization;
 use crate::tree::SyntaxTree;
 
 pub use self::error::{ParseError, ParseErrorKind};
 pub use self::result::ParseResult;
 pub use self::token::{ExtractedToken, Token};
 
-/// Take an input string and produce a list of tokens for consumption by the parser.
-pub fn tokenize<'t>(log: &slog::Logger, text: &'t str) -> Vec<ExtractedToken<'t>> {
-    let log = &log.new(slog_o!(
-        "filename" => slog_filename!(),
-        "lineno" => slog_lineno!(),
-        "function" => "tokenize",
-        "text" => str!(text),
-    ));
-
-    info!(log, "Running lexer on text");
-    Token::extract_all(log, text)
-}
-
 /// Parse through the given tokens and produce an AST.
 ///
 /// This takes a list of `ExtractedToken` items produced by `tokenize()`.
 pub fn parse<'r, 't>(
     log: &slog::Logger,
-    mut tokens: &'r [ExtractedToken<'t>],
+    tokenization: &'r Tokenization<'t>,
 ) -> ParseResult<SyntaxTree<'t>>
 where
     'r: 't,
 {
+    // Set up variables
+    let mut output = ParseResult::default();
+    let mut tokens = tokenization.tokens();
+    let full_text = tokenization.full_text();
+
     // Logging setup
     let log = &log.new(slog_o!(
         "filename" => slog_filename!(),
@@ -66,23 +62,25 @@ where
         "tokens-len" => tokens.len(),
     ));
 
-    info!(log, "Running parser on tokens");
-
     // Run through tokens until finished
-    let mut output = ParseResult::default();
+    info!(log, "Running parser on tokens");
 
     while !tokens.is_empty() {
         // Consume tokens to produce the next element
-        let Consumption { result, error } = {
+        let consumption = {
             let (extracted, remaining) = tokens
                 .split_first() //
                 .expect("Tokens list is empty");
 
-            consume(log, extracted, remaining)
+            consume(log, extracted, remaining, full_text)
         };
 
-        match result {
-            ConsumptionResult::Success { element, remaining } => {
+        match consumption {
+            Consumption::Success {
+                item,
+                remaining,
+                errors,
+            } => {
                 debug!(log, "Tokens successfully consumed to produce element");
 
                 // Update remaining tokens
@@ -93,26 +91,26 @@ where
                 tokens = remaining;
 
                 // Add the new element to the list
-                output.push(element);
-            }
-            ConsumptionResult::Failure => {
-                debug!(log, "Tokens unsuccessfully consumed, no element");
-            }
-        }
+                output.push(item);
 
-        if let Some(error) = error {
-            info!(
-                log,
-                "Received error during token consumption";
-                "error-token" => error.token(),
-                "error-rule" => error.rule(),
-                "error-span-start" => error.span().start,
-                "error-span-end" => error.span().end,
-                "error-kind" => error.kind().name(),
-            );
+                // Append errors
+                output.extend_errors(&errors);
+            }
+            Consumption::Failure { error } => {
+                info!(
+                    log,
+                    "Token consumption failed, returned error";
+                    "error-token" => error.token(),
+                    "error-rule" => error.rule(),
+                    "error-span-start" => error.span().start,
+                    "error-span-end" => error.span().end,
+                    "error-kind" => error.kind().name(),
+                );
 
-            output.append_err(error);
-        }
+                // Append the error
+                output.extend_errors(&[error]);
+            }
+        };
     }
 
     info!(log, "Finished running parser, returning gathered elements");

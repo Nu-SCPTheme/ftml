@@ -64,8 +64,23 @@ fn ast() {
     }
 
     macro_rules! container {
+        // For plain enum container types
         ($type:tt, $elements:expr) => {
-            Element::Container(Container::new(ContainerType::$type, $elements))
+            container!(ContainerType::$type; $elements)
+        };
+
+        // For container types with added data
+        ($type:expr; $elements:expr) => {
+            Element::Container(Container::new($type, $elements))
+        };
+
+        // Comma variants
+        ($type:tt, $elements:expr,) => {
+            container!($type, $elements)
+        };
+
+        ($type:expr; $elements:expr,) => {
+            container!($type; $elements)
         };
     }
 
@@ -188,18 +203,18 @@ fn ast() {
         )],
     );
 
-    test!("@@@@", vec![Element::Raw(vec![])], vec![]);
+    test!("@@@@", vec![Element::Raw("")], vec![]);
 
-    test!("@@@@@", vec![Element::Raw(vec!["@"])], vec![]);
+    test!("@@@@@", vec![Element::Raw("@")], vec![]);
 
-    test!("@@@@@@", vec![Element::Raw(vec!["@@"])], vec![]);
+    test!("@@@@@@", vec![Element::Raw("@@")], vec![]);
 
     test!(
         "test @@@@ string",
         vec![
             Element::Text("test"),
             Element::Text(" "),
-            Element::Raw(vec![]),
+            Element::Raw(""),
             Element::Text(" "),
             Element::Text("string"),
         ],
@@ -211,20 +226,18 @@ fn ast() {
         vec![
             Element::Text("test"),
             Element::Text(" "),
-            Element::Raw(vec!["@@"]),
+            Element::Raw("@@"),
             Element::Text(" "),
             Element::Text("string"),
         ],
         vec![],
     );
 
-    test!("@<>@", vec![Element::Raw(vec![])], vec![],);
+    test!("@<>@", vec![Element::Raw("")], vec![],);
 
     test!(
         "@@raw @< >@ content@@",
-        vec![Element::Raw(vec![
-            "raw", " ", "@<", " ", ">@", " ", "content",
-        ])],
+        vec![Element::Raw("raw @< >@ content")],
         vec![],
     );
 
@@ -233,7 +246,7 @@ fn ast() {
         vec![
             Element::Text("not"),
             Element::Text(" "),
-            Element::Raw(vec!["**"],),
+            Element::Raw("**",),
             Element::Text(" "),
             Element::Text("bold"),
         ],
@@ -242,7 +255,7 @@ fn ast() {
 
     test!(
         "@<raw @@ content>@",
-        vec![Element::Raw(vec!["raw", " ", "@@", " ", "content"])],
+        vec![Element::Raw("raw @@ content")],
         vec![],
     );
 
@@ -293,6 +306,75 @@ fn ast() {
             // Trying the ending raw as an opener
             ParseError::new_raw(
                 Token::RightRaw,
+                "fallback",
+                15..17,
+                ParseErrorKind::NoRulesMatch,
+            ),
+        ],
+    );
+
+    test!(
+        "##blue|text here##",
+        vec![container!(
+            ContainerType::Color("blue");
+            vec![
+                Element::Text("text"),
+                Element::Text(" "),
+                Element::Text("here"),
+            ],
+        )],
+        vec![],
+    );
+
+    test!(
+        "###ccc|css color!##",
+        vec![container!(
+            ContainerType::Color("#ccc");
+            vec![
+                Element::Text("css"),
+                Element::Text(" "),
+                Element::Text("color"),
+                Element::Text("!"),
+            ],
+        )],
+        vec![],
+    );
+
+    test!(
+        "##not color",
+        vec![
+            Element::Text("##"),
+            Element::Text("not"),
+            Element::Text(" "),
+            Element::Text("color"),
+        ],
+        vec![ParseError::new_raw(
+            Token::Color,
+            "fallback",
+            0..2,
+            ParseErrorKind::NoRulesMatch,
+        )],
+    );
+
+    test!(
+        "##invalid\n|text##",
+        vec![
+            Element::Text("##"),
+            Element::Text("invalid"),
+            Element::LineBreak,
+            Element::Text("|"),
+            Element::Text("text"),
+            Element::Text("##"),
+        ],
+        vec![
+            ParseError::new_raw(
+                Token::Color, //
+                "fallback",
+                0..2,
+                ParseErrorKind::NoRulesMatch,
+            ),
+            ParseError::new_raw(
+                Token::Color,
                 "fallback",
                 15..17,
                 ParseErrorKind::NoRulesMatch,

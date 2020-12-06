@@ -20,10 +20,11 @@
 
 use super::ParseError;
 use crate::parse::token::ExtractedToken;
+use crate::text::FullText;
 use crate::tree::Element;
 use std::fmt::{self, Debug};
 
-mod container;
+mod collect;
 mod mapping;
 
 pub mod impls;
@@ -49,10 +50,11 @@ impl Rule {
         log: &slog::Logger,
         extract: &'r ExtractedToken<'t>,
         remaining: &'r [ExtractedToken<'t>],
+        full_text: FullText<'t>,
     ) -> Consumption<'r, 't> {
         info!(log, "Trying to consume for parse rule"; "name" => self.name);
 
-        (self.try_consume_fn)(log, extract, remaining)
+        (self.try_consume_fn)(log, extract, remaining, full_text)
     }
 }
 
@@ -76,71 +78,87 @@ impl slog::Value for Rule {
     }
 }
 
-/// Result of attempting to consume tokens in a parse rule.
 #[derive(Debug, Clone)]
-pub struct Consumption<'t, 'r> {
-    pub result: ConsumptionResult<'t, 'r>,
-    pub error: Option<ParseError>,
+pub enum GenericConsumption<'t, 'r, T>
+where
+    T: 't,
+    'r: 't,
+{
+    Success {
+        item: T,
+        remaining: &'r [ExtractedToken<'t>],
+        errors: Vec<ParseError>,
+    },
+    Failure {
+        error: ParseError,
+    },
 }
 
-impl<'t, 'r> Consumption<'t, 'r> {
+impl<'t, 'r, T> GenericConsumption<'t, 'r, T>
+where
+    T: 't,
+{
     #[inline]
-    pub fn ok(element: Element<'t>, remaining: &'r [ExtractedToken<'t>]) -> Self {
-        Consumption {
-            result: ConsumptionResult::Success { element, remaining },
-            error: None,
+    pub fn ok(item: T, remaining: &'r [ExtractedToken<'t>]) -> Self {
+        GenericConsumption::Success {
+            item,
+            remaining,
+            errors: Vec::new(),
         }
     }
 
     #[inline]
-    pub fn warn(
-        element: Element<'t>,
-        remaining: &'r [ExtractedToken<'t>],
-        error: ParseError,
-    ) -> Self {
-        Consumption {
-            result: ConsumptionResult::Success { element, remaining },
-            error: Some(error),
+    pub fn warn(item: T, remaining: &'r [ExtractedToken<'t>], errors: Vec<ParseError>) -> Self {
+        GenericConsumption::Success {
+            item,
+            remaining,
+            errors,
         }
     }
 
     #[inline]
     pub fn err(error: ParseError) -> Self {
-        Consumption {
-            result: ConsumptionResult::Failure,
-            error: Some(error),
-        }
+        GenericConsumption::Failure { error }
     }
 
     #[inline]
     pub fn is_success(&self) -> bool {
-        match self.result {
-            ConsumptionResult::Success { .. } => true,
-            ConsumptionResult::Failure => false,
+        match self {
+            GenericConsumption::Success { .. } => true,
+            GenericConsumption::Failure { .. } => false,
         }
     }
 
     #[inline]
-    pub fn is_error(&self) -> bool {
-        !self.is_success()
+    pub fn map<F, U>(self, f: F) -> GenericConsumption<'t, 'r, U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            GenericConsumption::Failure { error } => GenericConsumption::Failure { error },
+            GenericConsumption::Success {
+                item,
+                remaining,
+                errors,
+            } => {
+                let item = f(item);
+
+                GenericConsumption::Success {
+                    item,
+                    remaining,
+                    errors,
+                }
+            }
+        }
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum ConsumptionResult<'t, 'r>
-where
-    'r: 't,
-{
-    Success {
-        element: Element<'t>,
-        remaining: &'r [ExtractedToken<'t>],
-    },
-    Failure,
-}
+pub type Consumption<'t, 'r> = GenericConsumption<'t, 'r, Element<'t>>;
 
 /// The function type for actually trying to consume tokens
 pub type TryConsumeFn = for<'t, 'r> fn(
     log: &slog::Logger,
     extracted: &'r ExtractedToken<'t>,
     remaining: &'r [ExtractedToken<'t>],
+    full_text: FullText<'t>,
 ) -> Consumption<'t, 'r>;

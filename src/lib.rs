@@ -68,14 +68,15 @@ mod log;
 mod enums;
 mod parse;
 mod preproc;
+mod text;
+mod tokenize;
 
 pub mod data;
 pub mod tree;
 
-pub use self::parse::{
-    parse, tokenize, ExtractedToken, ParseError, ParseErrorKind, ParseResult, Token,
-};
+pub use self::parse::{parse, ExtractedToken, ParseError, ParseErrorKind, ParseResult, Token};
 pub use self::preproc::preprocess;
+pub use self::tokenize::{tokenize, Tokenization};
 
 pub mod prelude {
     pub use super::tree::{Element, SyntaxTree};

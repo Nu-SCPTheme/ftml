@@ -29,6 +29,7 @@ fn try_consume_fn<'t, 'r>(
     log: &slog::Logger,
     extracted: &'r ExtractedToken<'t>,
     mut remaining: &'r [ExtractedToken<'t>],
+    full_text: FullText<'t>,
 ) -> Consumption<'t, 'r> {
     debug!(log, "Consuming tokens until end of raw");
 
@@ -70,7 +71,7 @@ fn try_consume_fn<'t, 'r>(
             (Token::Raw, Token::Raw) => {
                 debug!(log, "Found meta-raw (\"@@@@@@\"), returning");
 
-                return Consumption::ok(Element::Raw(vec!["@@"]), &remaining[2..]);
+                return Consumption::ok(Element::Raw("@@"), &remaining[2..]);
             }
 
             // "@@@@@" -> Element::Raw("@")
@@ -79,10 +80,10 @@ fn try_consume_fn<'t, 'r>(
             (Token::Raw, Token::Other) => {
                 if next_extracted_2.slice == "@" {
                     debug!(log, "Found single-raw (\"@@@@@\"), returning");
-                    return Consumption::ok(Element::Raw(vec!["@"]), &remaining[2..]);
+                    return Consumption::ok(Element::Raw("@"), &remaining[2..]);
                 } else {
                     debug!(log, "Found empty raw (\"@@@@\"), followed by other text");
-                    return Consumption::ok(Element::Raw(vec![""]), &remaining[1..]);
+                    return Consumption::ok(Element::Raw(""), &remaining[1..]);
                 }
             }
 
@@ -91,7 +92,7 @@ fn try_consume_fn<'t, 'r>(
             (Token::Raw, _) => {
                 debug!(log, "Found empty raw (\"@@@@\"), returning");
 
-                return Consumption::ok(Element::Raw(vec![]), &remaining[1..]);
+                return Consumption::ok(Element::Raw(""), &remaining[1..]);
             }
 
             // "@@ \n @@" -> Abort
@@ -109,10 +110,7 @@ fn try_consume_fn<'t, 'r>(
             (_, Token::Raw) => {
                 debug!(log, "Found single-element raw, returning");
 
-                return Consumption::ok(
-                    Element::Raw(vec![next_extracted_1.slice]),
-                    &remaining[2..],
-                );
+                return Consumption::ok(Element::Raw(next_extracted_1.slice), &remaining[2..]);
             }
 
             // Other, proceed with rule logic
@@ -123,8 +121,17 @@ fn try_consume_fn<'t, 'r>(
     // Handle the other cases, which are:
     // * "@@ <tokens> @@"
     // * "@< <tokens> >@"
+    //
+    // Collect the first and last token to build a slice of its contents.
+    // The last will be updated with each step in the iterator.
 
-    let mut slices = Vec::new();
+    let (start, mut end) = {
+        let extracted = remaining
+            .first()
+            .expect("There should be at least one token left after the special cases");
+
+        (extracted, extracted)
+    };
 
     while let Some((new_extracted, new_remaining)) = remaining.split_first() {
         let ExtractedToken { token, span, slice } = new_extracted;
@@ -145,7 +152,16 @@ fn try_consume_fn<'t, 'r>(
                 if *token == ending_token {
                     trace!(log, "Reached end of raw, returning");
 
-                    return Consumption::ok(Element::Raw(slices), new_remaining);
+                    let slice = if start == end {
+                        /* Empty raw */
+                        ""
+                    } else {
+                        /* Gather slice from spans */
+                        full_text.slice(log, start, end)
+                    };
+
+                    let element = Element::Raw(slice);
+                    return Consumption::ok(element, new_remaining);
                 }
 
                 trace!(log, "Wasn't end of raw, continuing");
@@ -179,8 +195,8 @@ fn try_consume_fn<'t, 'r>(
 
         trace!(log, "Appending present token to raw");
 
-        // Append slice and update pointer
-        slices.push(slice);
+        // Update last token and slice.
+        end = new_extracted;
         remaining = new_remaining;
     }
 

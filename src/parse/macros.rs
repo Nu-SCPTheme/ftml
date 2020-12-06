@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/line_break.rs
+ * parse/macros.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,20 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::prelude::*;
-
-pub const RULE_LINE_BREAK: Rule = Rule {
-    name: "line-break",
-    try_consume_fn,
-};
-
-fn try_consume_fn<'t, 'r>(
-    log: &slog::Logger,
-    _extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    _full_text: FullText<'t>,
-) -> Consumption<'t, 'r> {
-    debug!(log, "Consuming token as line break");
-
-    Consumption::ok(Element::LineBreak, remaining)
+/// Return if `GenericConsumption::Failure`, else unwrap the success.
+///
+/// This is analogous to `try!` for the `GenericConsumption` enum.
+macro_rules! try_consume {
+    ($consumption:expr) => {
+        match $consumption {
+            GenericConsumption::Failure { error } => return GenericConsumption::err(error),
+            GenericConsumption::Success {
+                item,
+                remaining,
+                errors,
+            } => (item, remaining, errors),
+        }
+    };
 }

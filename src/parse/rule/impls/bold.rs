@@ -29,13 +29,13 @@ fn try_consume_fn<'t, 'r>(
     log: &slog::Logger,
     extracted: &'r ExtractedToken<'t>,
     remaining: &'r [ExtractedToken<'t>],
+    full_text: FullText<'t>,
 ) -> Consumption<'t, 'r> {
     debug!(log, "Trying to create bold container");
 
     try_container(
         log,
-        extracted,
-        remaining,
+        (extracted, remaining, full_text),
         (RULE_BOLD, ContainerType::Bold),
         (Token::Bold, Token::Bold),
         &[Token::ParagraphBreak, Token::InputEnd],

@@ -46,6 +46,7 @@ pub enum Token {
     // Symbols
     //
     LeftBracket,
+    LeftBracketSpecial,
     RightBracket,
     LeftTag,
     LeftTagAnchor,
@@ -89,6 +90,7 @@ pub enum Token {
     // Links
     //
     LeftLink,
+    LeftLinkSpecial,
     RightLink,
 
     //
@@ -189,6 +191,7 @@ impl Token {
             Rule::left_comment => Token::LeftComment,
             Rule::right_comment => Token::RightComment,
             Rule::left_bracket => Token::LeftBracket,
+            Rule::left_bracket_special => Token::LeftBracketSpecial,
             Rule::right_bracket => Token::RightBracket,
             Rule::left_tag => Token::LeftTag,
             Rule::left_tag_anchor => Token::LeftTagAnchor,
@@ -225,6 +228,7 @@ impl Token {
 
             // Links
             Rule::left_link => Token::LeftLink,
+            Rule::left_link_special => Token::LeftLinkSpecial,
             Rule::right_link => Token::RightLink,
 
             // Tables
@@ -256,14 +260,6 @@ impl Token {
                 panic!("Received invalid pest rule: {:?}", rule)
             }
         }
-    }
-
-    #[inline]
-    pub fn is_whitespace(self) -> bool {
-        matches!(
-            self,
-            Token::LineBreak | Token::ParagraphBreak | Token::Whitespace,
-        )
     }
 
     #[inline]

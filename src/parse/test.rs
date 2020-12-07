@@ -18,6 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use crate::enums::{AnchorTarget, LinkLabel};
 use crate::parse::{ParseError, ParseErrorKind, Token};
 use crate::tree::{Container, ContainerType, Element, SyntaxTree};
 
@@ -523,6 +524,64 @@ fn ast() {
                 ParseErrorKind::NoRulesMatch,
             ),
         ],
+    );
+
+    test!(
+        "[https://example.com/ Some link!]",
+        vec![Element::Link {
+            url: "https://example.com/",
+            label: LinkLabel::Text("Some link!"),
+            anchor: AnchorTarget::Same,
+        }],
+        vec![],
+    );
+
+    test!(
+        "[*http://scp-sandbox-3.wikidot.com/system:recent-changes Sandbox: Recent Changes ]",
+        vec![Element::Link {
+            url: "http://scp-sandbox-3.wikidot.com/system:recent-changes",
+            label: LinkLabel::Text("Sandbox: Recent Changes"),
+            anchor: AnchorTarget::NewTab,
+        }],
+        vec![],
+    );
+
+    test!(
+        "[ not a link ]",
+        vec![
+            Element::Text("["),
+            Element::Text(" "),
+            Element::Text("not"),
+            Element::Text(" "),
+            Element::Text("a"),
+            Element::Text(" "),
+            Element::Text("link"),
+            Element::Text(" "),
+            Element::Text("]"),
+        ],
+        // No errors, because bare "[" is considered text
+        vec![],
+    );
+
+    test!(
+        "[* not a link ]",
+        vec![
+            Element::Text("[*"),
+            Element::Text(" "),
+            Element::Text("not"),
+            Element::Text(" "),
+            Element::Text("a"),
+            Element::Text(" "),
+            Element::Text("link"),
+            Element::Text(" "),
+            Element::Text("]"),
+        ],
+        vec![ParseError::new_raw(
+            Token::LeftBracketSpecial,
+            "fallback",
+            0..2,
+            ParseErrorKind::NoRulesMatch,
+        )],
     );
 }
 

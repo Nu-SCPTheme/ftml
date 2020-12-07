@@ -1,0 +1,31 @@
+{
+    "input": "//Fail Italics",
+    "tree": {
+        "elements": [
+            {
+                "element": "text",
+                "data": "//"
+            },
+            {
+                "element": "text",
+                "data": "Fail"
+            },
+            {
+                "element": "text",
+                "data": " "
+            },
+            {
+                "element": "text",
+                "data": "Italics"
+            }
+        ]
+    },
+    "errors": [
+        {
+            "token": "italics",
+            "rule": "fallback",
+            "span": [0, 2],
+            "kind": "no-rules-match"
+        }
+    ]
+}

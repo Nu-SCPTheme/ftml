@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/link.rs
+ * parse/rule/impls/link_single.rs
  *
  * ftml - Library to parse Wikidot code
  * Copyright (C) 2019-2020 Ammon Smith
@@ -18,16 +18,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+//! Rules for single-bracket links.
+//!
+//! Wikidot, in its infinite wisdom, has two means for designating links.
+//! This method allows any URL, either opening in a new tab or not.
+//! Its syntax is `[https://example.com/ Label text]`.
+
 use super::prelude::*;
 use crate::enums::{AnchorTarget, LinkLabel};
 
-pub const RULE_LINK: Rule = Rule {
-    name: "link",
+pub const RULE_LINK_SINGLE: Rule = Rule {
+    name: "link-single",
     try_consume_fn: link,
 };
 
-pub const RULE_LINK_NEW_TAB: Rule = Rule {
-    name: "link",
+pub const RULE_LINK_SINGLE_NEW_TAB: Rule = Rule {
+    name: "link-single-new-tab",
     try_consume_fn: link_new_tab,
 };
 
@@ -37,14 +43,14 @@ fn link<'t, 'r>(
     remaining: &'r [ExtractedToken<'t>],
     full_text: FullText<'t>,
 ) -> Consumption<'t, 'r> {
-    trace!(log, "Trying to create a bare link (regular)");
+    trace!(log, "Trying to create a single-bracket link (regular)");
 
     try_consume_link(
         log,
         extracted,
         remaining,
         full_text,
-        RULE_LINK,
+        RULE_LINK_SINGLE,
         AnchorTarget::Same,
     )
 }
@@ -55,18 +61,19 @@ fn link_new_tab<'t, 'r>(
     remaining: &'r [ExtractedToken<'t>],
     full_text: FullText<'t>,
 ) -> Consumption<'t, 'r> {
-    trace!(log, "Trying to create a bare link (new tab)");
+    trace!(log, "Trying to create a single-bracket link (new tab)");
 
     try_consume_link(
         log,
         extracted,
         remaining,
         full_text,
-        RULE_LINK_NEW_TAB,
+        RULE_LINK_SINGLE_NEW_TAB,
         AnchorTarget::NewTab,
     )
 }
 
+/// Build a single-bracket link with the given anchor.
 fn try_consume_link<'t, 'r>(
     log: &slog::Logger,
     extracted: &'r ExtractedToken<'t>,
@@ -75,7 +82,7 @@ fn try_consume_link<'t, 'r>(
     rule: Rule,
     anchor: AnchorTarget,
 ) -> Consumption<'t, 'r> {
-    debug!(log, "Trying to create a bare link"; "anchor" => anchor.name());
+    debug!(log, "Trying to create a single-bracket link"; "anchor" => anchor.name());
 
     // Gather path for link
     let consumption = try_merge(
@@ -83,7 +90,12 @@ fn try_consume_link<'t, 'r>(
         (extracted, remaining, full_text),
         rule,
         &[Token::Whitespace],
-        &[Token::ParagraphBreak, Token::LineBreak, Token::InputEnd],
+        &[
+            Token::RightBracket,
+            Token::ParagraphBreak,
+            Token::LineBreak,
+            Token::InputEnd,
+        ],
         &[],
     );
 
@@ -91,8 +103,7 @@ fn try_consume_link<'t, 'r>(
     let (url, extracted, remaining, mut all_errors) =
         try_consume_last!(remaining, consumption);
 
-    // If url is an empty string, parsing should fail, there's nothing here
-    if url.is_empty() {
+    if !url_valid(url) {
         return Consumption::err(ParseError::new(
             ParseErrorKind::RuleFailed,
             rule,
@@ -132,7 +143,6 @@ fn try_consume_link<'t, 'r>(
     all_errors.append(&mut errors);
 
     // Build link element
-    // Also trims link label
     let element = Element::Link {
         url: cow!(url),
         label: LinkLabel::Text(cow!(label)),
@@ -141,4 +151,27 @@ fn try_consume_link<'t, 'r>(
 
     // Return result
     Consumption::warn(element, remaining, all_errors)
+}
+
+fn url_valid(url: &str) -> bool {
+    const PROTOCOLS: [&str; 3] = ["http://", "https://", "ftp://"];
+
+    // If url is an empty string
+    if url.is_empty() {
+        return false;
+    }
+
+    // If it's a relative link
+    if url.starts_with('/') {
+        return true;
+    }
+
+    // If it's a URL
+    for protocol in &PROTOCOLS {
+        if url.starts_with(protocol) {
+            return true;
+        }
+    }
+
+    false
 }

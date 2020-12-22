@@ -1,5 +1,5 @@
 {
-    "input": "Fail --] Comment",
+    "input": "@@Fail\n\nRaw@@",
     "tree": {
         "elements": [
             {
@@ -9,23 +9,27 @@
                     "elements": [
                         {
                             "element": "text",
+                            "data": "@@"
+                        },
+                        {
+                            "element": "text",
                             "data": "Fail"
+                        }
+                    ]
+                }
+            },
+            {
+                "element": "container",
+                "data": {
+                    "type": "paragraph",
+                    "elements": [
+                        {
+                            "element": "text",
+                            "data": "Raw"
                         },
                         {
                             "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "--]"
-                        },
-                        {
-                            "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "Comment"
+                            "data": "@@"
                         }
                     ]
                 }
@@ -36,9 +40,15 @@
     },
     "errors": [
         {
-            "token": "right-comment",
+            "token": "raw",
             "rule": "fallback",
-            "span": [5, 8],
+            "span": [0, 2],
+            "kind": "no-rules-match"
+        },
+        {
+            "token": "raw",
+            "rule": "fallback",
+            "span": [11, 13],
             "kind": "no-rules-match"
         }
     ]

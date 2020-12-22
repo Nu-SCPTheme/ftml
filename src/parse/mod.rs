@@ -23,14 +23,20 @@ mod macros;
 
 mod consume;
 mod error;
+mod paragraph;
 mod result;
 mod rule;
+mod stack;
 mod token;
+mod upcoming;
 
-use self::consume::consume;
-use self::rule::Consumption;
+use self::consume::GenericConsumption;
+use self::paragraph::gather_paragraphs;
+use self::rule::impls::RULE_PAGE;
+use self::upcoming::UpcomingTokens;
 use crate::tokenize::Tokenization;
 use crate::tree::SyntaxTree;
+use std::borrow::Cow;
 
 pub use self::error::{ParseError, ParseErrorKind, ParseException};
 pub use self::result::ParseResult;
@@ -47,9 +53,7 @@ where
     'r: 't,
 {
     // Set up variables
-    let mut output = ParseResult::default();
-    let mut styles = Vec::new();
-    let mut tokens = tokenization.tokens();
+    let tokens = tokenization.tokens();
     let full_text = tokenization.full_text();
 
     // Logging setup
@@ -60,62 +64,56 @@ where
         "tokens-len" => tokens.len(),
     ));
 
-    // Run through tokens until finished
+    // At the top level, we gather elements into paragraphs
     info!(log, "Running parser on tokens");
+    let tokens = UpcomingTokens::from(tokens);
+    let consumption = gather_paragraphs(log, tokens, full_text, RULE_PAGE, &[], &[]);
 
-    while !tokens.is_empty() {
-        // Consume tokens to produce the next element
-        let consumption = {
-            let (extracted, remaining) = tokens
-                .split_first() //
-                .expect("Tokens list is empty");
+    debug!(log, "Finished paragraph gathering, matching on consumption");
+    match consumption {
+        GenericConsumption::Success {
+            item: elements,
+            remaining: _,
+            exceptions,
+        } => {
+            let (errors, styles) = extract_exceptions(exceptions);
 
-            consume(log, extracted, remaining, full_text)
-        };
+            info!(
+                log,
+                "Finished parsing, producing final syntax tree";
+                "errors-len" => errors.len(),
+                "styles-len" => styles.len(),
+            );
 
-        match consumption {
-            Consumption::Success {
-                item,
-                remaining,
-                exceptions,
-            } => {
-                debug!(log, "Tokens successfully consumed to produce element");
+            SyntaxTree::from_element_result(elements, errors, styles)
+        }
+        GenericConsumption::Failure { error } => {
+            // This path is only reachable if invalid_tokens is non-empty.
+            // As this is the highest-level, we do not have any premature ending tokens,
+            // but rather keep going until the end of the input.
+            //
+            // Thus this path should not be reached.
 
-                // Update remaining tokens
-                //
-                // The new value is a subslice of tokens,
-                // equivalent to &tokens[offset..] but without
-                // needing to assert bounds.
-                tokens = remaining;
+            panic!(
+                "Got parse error from highest-level paragraph gather: {:#?}",
+                error,
+            );
+        }
+    }
+}
 
-                // Add the new element to the list
-                output.push(item);
+fn extract_exceptions(
+    exceptions: Vec<ParseException>,
+) -> (Vec<ParseError>, Vec<Cow<str>>) {
+    let mut errors = Vec::new();
+    let mut styles = Vec::new();
 
-                // Process exceptions
-                for exception in exceptions {
-                    match exception {
-                        ParseException::Error(error) => output.append_error(error),
-                        ParseException::Style(style) => styles.push(style),
-                    }
-                }
-            }
-            Consumption::Failure { error } => {
-                info!(
-                    log,
-                    "Token consumption failed, returned error";
-                    "error-token" => error.token(),
-                    "error-rule" => error.rule(),
-                    "error-span-start" => error.span().start,
-                    "error-span-end" => error.span().end,
-                    "error-kind" => error.kind().name(),
-                );
-
-                // Append the error
-                output.append_error(error);
-            }
-        };
+    for exception in exceptions {
+        match exception {
+            ParseException::Error(error) => errors.push(error),
+            ParseException::Style(style) => styles.push(style),
+        }
     }
 
-    info!(log, "Finished running parser, returning gathered elements");
-    SyntaxTree::from_element_result(output, styles)
+    (errors, styles)
 }

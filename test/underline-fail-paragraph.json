@@ -1,5 +1,5 @@
 {
-    "input": "Fail --] Comment",
+    "input": "__Fail\n\nUnderline__",
     "tree": {
         "elements": [
             {
@@ -9,23 +9,27 @@
                     "elements": [
                         {
                             "element": "text",
+                            "data": "__"
+                        },
+                        {
+                            "element": "text",
                             "data": "Fail"
+                        }
+                    ]
+                }
+            },
+            {
+                "element": "container",
+                "data": {
+                    "type": "paragraph",
+                    "elements": [
+                        {
+                            "element": "text",
+                            "data": "Underline"
                         },
                         {
                             "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "--]"
-                        },
-                        {
-                            "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "Comment"
+                            "data": "__"
                         }
                     ]
                 }
@@ -36,9 +40,15 @@
     },
     "errors": [
         {
-            "token": "right-comment",
+            "token": "underline",
             "rule": "fallback",
-            "span": [5, 8],
+            "span": [0, 2],
+            "kind": "no-rules-match"
+        },
+        {
+            "token": "underline",
+            "rule": "fallback",
+            "span": [17, 19],
             "kind": "no-rules-match"
         }
     ]

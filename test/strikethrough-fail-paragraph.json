@@ -1,5 +1,5 @@
 {
-    "input": "Fail --] Comment",
+    "input": "--Fail\n\nStrikethrough--",
     "tree": {
         "elements": [
             {
@@ -9,23 +9,27 @@
                     "elements": [
                         {
                             "element": "text",
+                            "data": "\u2014"
+                        },
+                        {
+                            "element": "text",
                             "data": "Fail"
+                        }
+                    ]
+                }
+            },
+            {
+                "element": "container",
+                "data": {
+                    "type": "paragraph",
+                    "elements": [
+                        {
+                            "element": "text",
+                            "data": "Strikethrough"
                         },
                         {
                             "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "--]"
-                        },
-                        {
-                            "element": "text",
-                            "data": " "
-                        },
-                        {
-                            "element": "text",
-                            "data": "Comment"
+                            "data": "\u2014"
                         }
                     ]
                 }
@@ -35,11 +39,5 @@
         ]
     },
     "errors": [
-        {
-            "token": "right-comment",
-            "rule": "fallback",
-            "span": [5, 8],
-            "kind": "no-rules-match"
-        }
     ]
 }

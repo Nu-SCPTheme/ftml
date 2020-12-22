@@ -1,5 +1,5 @@
 {
-    "input": "Fail --] Comment",
+    "input": "First paragraph\n\nSecond paragraph",
     "tree": {
         "elements": [
             {
@@ -9,7 +9,7 @@
                     "elements": [
                         {
                             "element": "text",
-                            "data": "Fail"
+                            "data": "First"
                         },
                         {
                             "element": "text",
@@ -17,7 +17,19 @@
                         },
                         {
                             "element": "text",
-                            "data": "--]"
+                            "data": "paragraph"
+                        }
+                    ]
+                }
+            },
+            {
+                "element": "container",
+                "data": {
+                    "type": "paragraph",
+                    "elements": [
+                        {
+                            "element": "text",
+                            "data": "Second"
                         },
                         {
                             "element": "text",
@@ -25,7 +37,7 @@
                         },
                         {
                             "element": "text",
-                            "data": "Comment"
+                            "data": "paragraph"
                         }
                     ]
                 }
@@ -35,11 +47,5 @@
         ]
     },
     "errors": [
-        {
-            "token": "right-comment",
-            "rule": "fallback",
-            "span": [5, 8],
-            "kind": "no-rules-match"
-        }
     ]
 }

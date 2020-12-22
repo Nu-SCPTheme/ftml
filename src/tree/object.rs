@@ -19,7 +19,7 @@
  */
 
 use super::Element;
-use crate::ParseResult;
+use crate::{ParseError, ParseResult};
 use std::borrow::Cow;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, Eq)]
@@ -42,21 +42,10 @@ pub struct SyntaxTree<'t> {
 
 impl<'t> SyntaxTree<'t> {
     pub(crate) fn from_element_result(
-        result: ParseResult<Vec<Element<'t>>>,
+        elements: Vec<Element<'t>>,
+        errors: Vec<ParseError>,
         styles: Vec<Cow<'t, str>>,
     ) -> ParseResult<Self> {
-        // Extract values from result
-        let (mut elements, errors) = result.into();
-
-        // Remove trailing null element
-        // This is added because Token::InputEnd is converted into this.
-        {
-            let last = elements.pop();
-
-            assert_eq!(last, Some(Element::Null), "Last element wasn't null!");
-        }
-
-        // Create final SyntaxTree result
         let tree = SyntaxTree { elements, styles };
         ParseResult::new(tree, errors)
     }

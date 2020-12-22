@@ -28,20 +28,24 @@ use strum_macros::IntoStaticStr;
 #[serde(rename_all = "kebab-case")]
 pub struct Container<'t> {
     #[serde(rename = "type")]
-    etype: ContainerType,
+    ctype: ContainerType,
 
     elements: Vec<Element<'t>>,
 }
 
 impl<'t> Container<'t> {
     #[inline]
-    pub fn new(etype: ContainerType, elements: Vec<Element<'t>>) -> Self {
-        Container { etype, elements }
+    pub fn new(ctype: ContainerType, mut elements: Vec<Element<'t>>) -> Self {
+        // Prune out null elements
+        elements.retain(|element| element != &Element::Null);
+
+        // Build object
+        Container { ctype, elements }
     }
 
     #[inline]
-    pub fn etype(&self) -> ContainerType {
-        self.etype
+    pub fn ctype(&self) -> ContainerType {
+        self.ctype
     }
 
     #[inline]

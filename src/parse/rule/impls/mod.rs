@@ -19,10 +19,10 @@
  */
 
 mod prelude {
-    pub use crate::parse::consume::consume;
+    pub use crate::parse::consume::{consume, Consumption, GenericConsumption};
     pub use crate::parse::error::{ParseError, ParseErrorKind, ParseException};
     pub use crate::parse::rule::collect::*;
-    pub use crate::parse::rule::{Consumption, GenericConsumption, Rule, TryConsumeFn};
+    pub use crate::parse::rule::{Rule, TryConsumeFn};
     pub use crate::parse::token::{ExtractedToken, Token};
     pub use crate::text::FullText;
     pub use crate::tree::{Container, ContainerType, Element};
@@ -40,6 +40,7 @@ mod link_single;
 mod link_triple;
 mod monospace;
 mod null;
+mod page;
 mod raw;
 mod strikethrough;
 mod subscript;
@@ -61,6 +62,7 @@ pub use self::link_single::{RULE_LINK_SINGLE, RULE_LINK_SINGLE_NEW_TAB};
 pub use self::link_triple::{RULE_LINK_TRIPLE, RULE_LINK_TRIPLE_NEW_TAB};
 pub use self::monospace::RULE_MONOSPACE;
 pub use self::null::RULE_NULL;
+pub use self::page::RULE_PAGE;
 pub use self::raw::RULE_RAW;
 pub use self::strikethrough::RULE_STRIKETHROUGH;
 pub use self::subscript::RULE_SUBSCRIPT;

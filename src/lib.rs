@@ -68,9 +68,13 @@ mod test;
 #[macro_use]
 mod log;
 
+#[macro_use]
+mod macros;
+
 mod enums;
 mod parse;
 mod preproc;
+mod render;
 mod text;
 mod tokenize;
 
@@ -81,6 +85,7 @@ pub use self::parse::{
     parse, ExtractedToken, ParseError, ParseErrorKind, ParseResult, Token,
 };
 pub use self::preproc::preprocess;
+pub use self::render::*;
 pub use self::tokenize::{tokenize, Tokenization};
 
 pub mod prelude {

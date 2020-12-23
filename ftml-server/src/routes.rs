@@ -1,7 +1,7 @@
 /*
  * routes/mod.rs
  *
- * ftml - Library to parse Wikidot code
+ * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2020 Ammon Smith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -68,6 +68,7 @@ fn tokenize(
     };
 
     let regular = warp::path("tokenize")
+        .and(warp::path::end())
         .and(warp::body::content_length_limit(CONTENT_LENGTH_LIMIT))
         .and(warp::body::json())
         .map(factory(true));
@@ -77,7 +78,7 @@ fn tokenize(
         .and(warp::body::json())
         .map(factory(false));
 
-    only.or(regular)
+    regular.or(only)
 }
 
 fn parse(
@@ -100,6 +101,7 @@ fn parse(
     };
 
     let regular = warp::path("parse")
+        .and(warp::path::end())
         .and(warp::body::content_length_limit(CONTENT_LENGTH_LIMIT))
         .and(warp::body::json())
         .map(factory(true));
@@ -109,7 +111,7 @@ fn parse(
         .and(warp::body::json())
         .map(factory(false));
 
-    only.or(regular)
+    regular.or(only)
 }
 
 fn render_html(
@@ -138,6 +140,7 @@ fn render_html(
     };
 
     let regular = warp::path!("render" / "html")
+        .and(warp::path::end())
         .and(warp::body::content_length_limit(CONTENT_LENGTH_LIMIT))
         .and(warp::body::json())
         .map(factory(true));
@@ -147,7 +150,7 @@ fn render_html(
         .and(warp::body::json())
         .map(factory(false));
 
-    only.or(regular)
+    regular.or(only)
 }
 
 fn misc() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -189,4 +192,5 @@ pub fn build(
     warp::any()
         .and(preproc.or(tokenize).or(parse).or(render_html).or(misc))
         .with(log_middleware)
+        .with(warp::filters::compression::gzip())
 }

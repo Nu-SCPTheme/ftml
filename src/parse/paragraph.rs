@@ -1,7 +1,7 @@
 /*
  * parse/paragraph.rs
  *
- * ftml - Library to parse Wikidot code
+ * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2020 Ammon Smith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ use super::rule::Rule;
 use super::stack::ParagraphStack;
 use super::token::Token;
 use super::upcoming::UpcomingTokens;
-use super::{ParseError, ParseErrorKind, ParseException};
+use super::{ParseError, ParseErrorKind};
 use crate::text::FullText;
 use crate::tree::Element;
 
@@ -127,7 +127,7 @@ where
             Consumption::Success {
                 item,
                 remaining,
-                exceptions,
+                mut exceptions,
             } => {
                 debug!(log, "Tokens successfully consumed to produce element");
 
@@ -142,12 +142,7 @@ where
                 stack.push_element(item);
 
                 // Process exceptions
-                for exception in exceptions {
-                    match exception {
-                        ParseException::Error(error) => stack.push_error(error),
-                        ParseException::Style(style) => stack.push_style(style),
-                    }
-                }
+                stack.push_exceptions(&mut exceptions);
             }
             Consumption::Failure { error } => {
                 info!(

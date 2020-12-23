@@ -1,7 +1,7 @@
 /*
  * parse/stack.rs
  *
- * ftml - Library to parse Wikidot code
+ * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2020 Ammon Smith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,6 @@
 use super::{ExtractedToken, ParseError, ParseException};
 use crate::parse::consume::GenericConsumption;
 use crate::tree::{Container, ContainerType, Element};
-use std::borrow::Cow;
 use std::mem;
 
 #[derive(Debug)]
@@ -62,14 +61,14 @@ impl<'l, 't> ParagraphStack<'l, 't> {
     }
 
     #[inline]
-    pub fn push_style(&mut self, style: Cow<'t, str>) {
+    pub fn push_exceptions(&mut self, exceptions: &mut Vec<ParseException<'t>>) {
         debug!(
             self.log,
-            "Pushing style to stack";
-            "style" => style.as_ref(),
+            "Pushing exception to stack";
+            "exceptions-len" => exceptions.len(),
         );
 
-        self.exceptions.push(ParseException::Style(style));
+        self.exceptions.append(exceptions);
     }
 
     #[inline]

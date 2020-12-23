@@ -51,6 +51,8 @@ pub fn consume<'r, 't>(
 
     debug!(log, "Looking for valid rules");
 
+    let mut all_exceptions = Vec::new();
+
     for rule in rules_for_token(extracted) {
         info!(log, "Trying rule consumption for tokens"; "rule" => rule);
 
@@ -58,22 +60,43 @@ pub fn consume<'r, 't>(
         if consumption.is_success() {
             debug!(log, "Rule matched, returning generated result"; "rule" => rule);
 
+            // Explicitly drop exceptions
+            //
+            // We're returning the successful consumption
+            // so these are going to be dropped as a previously
+            // unsuccessful attempts.
+            mem::drop(all_exceptions);
+
             return consumption;
         }
 
-        // Discard invalid consumption
-        mem::drop(consumption);
+        // Extract errors for appending
+        match consumption {
+            Consumption::Success { mut exceptions, .. } => {
+                all_exceptions.append(&mut exceptions);
+            }
+            Consumption::Failure { error } => {
+                all_exceptions.push(ParseException::Error(error));
+            }
+        }
     }
 
     debug!(log, "All rules exhausted, using generic text fallback");
 
-    let error = ParseException::Error(ParseError::new(
+    trace!(log, "Removing non-errors from exceptions list");
+
+    // We should only carry styles over from *successful* consumptions
+    all_exceptions.retain(|exception| matches!(exception, ParseException::Error(_)));
+
+    trace!(log, "Adding fallback error to exceptions list");
+
+    all_exceptions.push(ParseException::Error(ParseError::new(
         ParseErrorKind::NoRulesMatch,
         RULE_FALLBACK,
         extracted,
-    ));
+    )));
 
-    Consumption::warn(text!(slice), remaining, vec![error])
+    Consumption::warn(text!(slice), remaining, all_exceptions)
 }
 
 #[derive(Debug, Clone)]

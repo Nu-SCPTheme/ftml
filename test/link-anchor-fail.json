@@ -1,5 +1,5 @@
 {
-    "input": "//Fail Italics",
+    "input": "[# Label",
     "tree": {
         "elements": [
             {
@@ -9,11 +9,7 @@
                     "elements": [
                         {
                             "element": "text",
-                            "data": "//"
-                        },
-                        {
-                            "element": "text",
-                            "data": "Fail"
+                            "data": "[#"
                         },
                         {
                             "element": "text",
@@ -21,7 +17,7 @@
                         },
                         {
                             "element": "text",
-                            "data": "Italics"
+                            "data": "Label"
                         }
                     ]
                 }
@@ -33,12 +29,12 @@
     "errors": [
         {
             "token": "input-end",
-            "rule": "italics",
-            "span": [14, 14],
+            "rule": "link-anchor",
+            "span": [8, 8],
             "kind": "rule-failed"
         },
         {
-            "token": "italics",
+            "token": "left-bracket-anchor",
             "rule": "fallback",
             "span": [0, 2],
             "kind": "no-rules-match"

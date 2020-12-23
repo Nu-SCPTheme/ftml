@@ -37,3 +37,31 @@ macro_rules! slog_lineno {
         })
     };
 }
+
+#[cfg(test)]
+mod loggers {
+    #[inline]
+    pub fn build_logger() -> slog::Logger {
+        build_null_logger()
+    }
+
+    #[allow(dead_code)]
+    pub fn build_null_logger() -> slog::Logger {
+        slog::Logger::root(slog::Discard, o!())
+    }
+
+    #[allow(dead_code)]
+    pub fn build_console_logger() -> slog::Logger {
+        use sloggers::terminal::TerminalLoggerBuilder;
+        use sloggers::types::Severity;
+        use sloggers::Build;
+
+        TerminalLoggerBuilder::new()
+            .level(Severity::Trace)
+            .build()
+            .expect("Unable to initialize logger")
+    }
+}
+
+#[cfg(test)]
+pub use self::loggers::{build_console_logger, build_logger, build_null_logger};

@@ -1,37 +1,31 @@
 [package]
-name = "ftml"
-description = "Foundation Text Markup Language - a library to render Wikidot code as HTML"
+name = "ftml-server"
+description = "Foundation Text Markup Language - server to render Wikidot code as HTML"
 repository = "https://github.com/Nu-SCPTheme/ftml"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 keywords = ["wikidot", "wikijump", "ftml", "parsing", "html"]
 categories = []
-exclude = [".gitignore", ".github"]
+exclude = [".gitignore"]
 
 version = "0.3.1"
 authors = ["Ammon Smith <ammon.i.smith@gmail.com>"]
 edition = "2018" # this refers to the Cargo.toml version
 
-[workspace]
-members = ["ftml-server"]
-
-[lib]
-name = "ftml"
-
 [dependencies]
-cfg-if = "1"
-enum-map = "0.6"
+clap = "2"
+ftml = { path = ".." }
+hostname = "0.3"
 lazy_static = "1"
-pest = "2"
-pest_derive = "2"
-regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 slog = "2.7"
-str-macro = "0.1"
-strum = "0.20"
-strum_macros = "0.20"
-tinyvec = "1"
-
-[dev-dependencies]
+slog-bunyan = "2"
 sloggers = "1"
+str-macro = "0.1"
+tokio = { version = "0.2", features = ["macros"] }
+users = "0.11"
+warp = "0.2"
+
+[build-dependencies]
+built = { version = "0.4", features = ["chrono", "git2"] }

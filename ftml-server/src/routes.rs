@@ -19,10 +19,10 @@
  */
 
 use crate::info;
-use ftml::ParseResult;
+use ftml::ParseOutcome;
 use warp::{Filter, Rejection, Reply};
 
-const CONTENT_LENGTH_LIMIT: u64 = 12 * 1024 * 1024 * 1024; /* 12 MiB */
+const CONTENT_LENGTH_LIMIT: u64 = 2 * 1024 * 1024 * 1024; /* 2 MiB */
 
 // Helper struct
 #[derive(Deserialize, Debug)]
@@ -133,7 +133,7 @@ fn render_html(
             let parsed = ftml::parse(&log, &tokens);
             let (tree, errors) = parsed.into();
             let output = ftml::HtmlRender.render(&tree);
-            let result = ParseResult::new(output, errors);
+            let result = ParseOutcome::new(output, errors);
 
             warp::reply::json(&result)
         }

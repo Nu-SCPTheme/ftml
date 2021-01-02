@@ -67,27 +67,15 @@ token = _{
     // Brackets
     left_link_special |
     left_link |
-    left_tag_special |
-    left_tag |
+    left_block_special |
+    left_block_end |
+    left_block |
     left_bracket_anchor |
     left_bracket_special |
     left_bracket |
     right_link |
-    right_tag_end |
-    right_tag |
+    right_block |
     right_bracket |
-
-    // Singular symbols
-    clear_float_center |
-    clear_float_left |
-    clear_float_right |
-    clear_float |
-    triple_dash |
-    double_dash |
-    pipe |
-    equals |
-    quote |
-    heading |
 
     // Formatting
     bold |
@@ -98,6 +86,19 @@ token = _{
     color |
     left_monospace |
     right_monospace |
+
+    // Singular symbols
+    clear_float_center |
+    clear_float_left |
+    clear_float_right |
+    clear_float |
+    triple_dash |
+    double_dash |
+    pipe |
+    equals |
+    underscore |
+    quote |
+    heading |
 
     // Tables
     table_column_title |
@@ -145,13 +146,13 @@ right_comment = { "--]" }
 left_bracket = { "[" }
 left_bracket_anchor = { "[#" }
 left_bracket_special = { "[*" }
-left_tag = { "[[" }
-left_tag_special = { "[[*" }
+left_block = { "[[" }
+left_block_end = { "[[/" }
+left_block_special = { "[[*" }
 left_link = { "[[[" }
 left_link_special = { "[[[*" }
 right_bracket = { "]" }
-right_tag = { "]]" }
-right_tag_end = { "/]]" }
+right_block = { "]]" }
 right_link = { "]]]" }
 
 clear_float = { "~"{4,} }
@@ -162,6 +163,7 @@ triple_dash = { "-"{3,} }
 double_dash = { "-"{2} }
 pipe = { "|" }
 equals = { "=" }
+underscore = { "_" }
 quote = { ">"+ ~ " "? }
 heading = { "+"{1,6} }
 

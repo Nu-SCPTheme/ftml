@@ -41,108 +41,87 @@ pub const RULE_LINK_TRIPLE_NEW_TAB: Rule = Rule {
     try_consume_fn: link_new_tab,
 };
 
-fn link<'r, 't>(
+fn link<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to create a triple-bracket link (regular)");
 
-    try_consume_link(
-        log,
-        extracted,
-        remaining,
-        full_text,
-        RULE_LINK_TRIPLE,
-        AnchorTarget::Same,
-    )
+    check_step(parser, Token::LeftLink)?;
+
+    try_consume_link(log, parser, RULE_LINK_TRIPLE, AnchorTarget::Same)
 }
 
-fn link_new_tab<'r, 't>(
+fn link_new_tab<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to create a triple-bracket link (new tab)");
 
-    try_consume_link(
-        log,
-        extracted,
-        remaining,
-        full_text,
-        RULE_LINK_TRIPLE_NEW_TAB,
-        AnchorTarget::NewTab,
-    )
+    check_step(parser, Token::LeftLinkSpecial)?;
+
+    try_consume_link(log, parser, RULE_LINK_TRIPLE_NEW_TAB, AnchorTarget::NewTab)
 }
 
 /// Build a triple-bracket link with the given anchor.
-fn try_consume_link<'r, 't>(
+fn try_consume_link<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
+    parser: &'p mut Parser<'r, 't>,
     rule: Rule,
     anchor: AnchorTarget,
-) -> Consumption<'r, 't> {
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create a triple-bracket link"; "anchor" => anchor.name());
 
     // Gather path for link
-    let consumption = try_merge(
+    let (url, last) = collect_merge_keep(
         log,
-        (extracted, remaining, full_text),
+        parser,
         rule,
-        &[Token::Pipe, Token::RightLink],
-        &[Token::ParagraphBreak, Token::LineBreak],
-        &[],
-    );
+        &[
+            ParseCondition::current(Token::Pipe),
+            ParseCondition::current(Token::RightLink),
+        ],
+        &[
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::current(Token::LineBreak),
+        ],
+    )?;
 
-    // Return if failure, get ready for second part
-    let (url, extracted, remaining, exceptions) =
-        try_consume_last!(remaining, consumption);
+    debug!(
+        log,
+        "Retrieved url for link, now build element";
+        "url" => url,
+    );
 
     // Trim text
     let url = url.trim();
 
     // If url is an empty string, parsing should fail, there's nothing here
     if url.is_empty() {
-        return Consumption::err(ParseError::new(
-            ParseErrorKind::RuleFailed,
-            rule,
-            extracted,
-        ));
+        return Err(parser.make_error(ParseErrorKind::RuleFailed));
     }
 
     // Determine what token we ended on, i.e. which [[[ variant it is.
-    match extracted.token {
+    match last.token {
         // [[[name]]] type links
-        Token::RightLink => build_same(log, remaining, exceptions, url, anchor),
+        Token::RightLink => build_same(log, parser, url, anchor),
 
         // [[[url|label]]] type links
-        Token::Pipe => build_separate(
-            log,
-            (extracted, remaining, full_text),
-            exceptions,
-            rule,
-            url,
-            anchor,
-        ),
+        Token::Pipe => build_separate(log, parser, rule, url, anchor),
 
-        // Token was already checked in try_merge(), impossible case
+        // Token was already checked in collect_merge(), impossible case
         _ => unreachable!(),
     }
 }
 
 /// Helper to build link with the same URL and label.
 /// e.g. `[[[name]]]`
-fn build_same<'r, 't>(
+fn build_same<'p, 'r, 't>(
     log: &slog::Logger,
-    remaining: &'r [ExtractedToken<'t>],
-    errors: Vec<ParseException<'t>>,
+    _parser: &'p mut Parser<'r, 't>,
     url: &'t str,
     anchor: AnchorTarget,
-) -> Consumption<'r, 't> {
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(
         log,
         "Building link with same URL and label";
@@ -155,23 +134,18 @@ fn build_same<'r, 't>(
         anchor,
     };
 
-    Consumption::warn(element, remaining, errors)
+    ok!(element)
 }
 
 /// Helper to build link with separate URL and label.
 /// e.g. `[[[page|label]]]`, or `[[[page|]]]`
-fn build_separate<'r, 't>(
+fn build_separate<'p, 'r, 't>(
     log: &slog::Logger,
-    (extracted, remaining, full_text): (
-        &'r ExtractedToken<'t>,
-        &'r [ExtractedToken<'t>],
-        FullText<'t>,
-    ),
-    mut all_exc: Vec<ParseException<'t>>,
+    parser: &'p mut Parser<'r, 't>,
     rule: Rule,
     url: &'t str,
     anchor: AnchorTarget,
-) -> Consumption<'r, 't> {
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(
         log,
         "Building link with separate URL and label";
@@ -179,25 +153,24 @@ fn build_separate<'r, 't>(
     );
 
     // Gather label for link
-    let consumption = try_merge(
+    let label = collect_merge(
         log,
-        (extracted, remaining, full_text),
+        parser,
         rule,
-        &[Token::RightLink],
-        &[Token::ParagraphBreak, Token::LineBreak],
-        &[],
-    );
-
-    // Append errors, or return if failure
-    let (label, remaining, mut exceptions) = try_consume!(consumption);
+        &[ParseCondition::current(Token::RightLink)],
+        &[
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::current(Token::LineBreak),
+        ],
+    )?;
 
     debug!(
         log,
-        "Retrieved label for link, now build element";
+        "Retrieved label for link, now building element";
         "label" => label,
     );
 
-    // Trimming label
+    // Trim label
     let label = label.trim();
 
     // If label is empty, then it takes on the page's title
@@ -208,9 +181,6 @@ fn build_separate<'r, 't>(
         LinkLabel::Text(cow!(label))
     };
 
-    // Add on new exceptions
-    all_exc.append(&mut exceptions);
-
     // Build link element
     let element = Element::Link {
         url: cow!(url),
@@ -219,5 +189,5 @@ fn build_separate<'r, 't>(
     };
 
     // Return result
-    Consumption::warn(element, remaining, all_exc)
+    ok!(element)
 }

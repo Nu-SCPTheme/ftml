@@ -1,5 +1,5 @@
 /*
- * parse/rule/collect/mod.rs
+ * parse/collect/mod.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2020 Ammon Smith
@@ -20,26 +20,30 @@
 
 //! Module which contains functions to iterate through tokens and output according to rules.
 //!
-//! The main function here is `try_collect()`, which is a generic procedure to perform
+//! The main function here is `collect()`, which is a generic procedure to perform
 //! some action over tokens, finishing or abortion when it reaches certain tokens.
+//!
+//! The other functions are extensions of `collect()` which perform more specific functions,
+//! but still with the same customization.
 
 mod prelude {
-    pub use super::try_collect;
-    pub use crate::parse::consume::{consume, Consumption, GenericConsumption};
+    pub use super::collect;
+    pub use crate::parse::condition::ParseCondition;
+    pub use crate::parse::consume::consume;
     pub use crate::parse::error::{ParseError, ParseErrorKind};
+    pub use crate::parse::parser::Parser;
+    pub use crate::parse::prelude::*;
     pub use crate::parse::rule::Rule;
     pub use crate::parse::token::{ExtractedToken, Token};
     pub use crate::text::FullText;
 }
 
+mod consume;
 mod container;
 mod generic;
-mod last;
 mod merge;
-mod paragraph;
 
-pub use self::container::try_container;
-pub use self::generic::try_collect;
-pub use self::last::last_before_slice;
-pub use self::merge::try_merge;
-pub use self::paragraph::try_paragraph;
+pub use self::consume::collect_consume;
+pub use self::container::collect_container;
+pub use self::generic::collect;
+pub use self::merge::{collect_merge, collect_merge_keep};

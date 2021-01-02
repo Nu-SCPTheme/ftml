@@ -25,36 +25,28 @@ pub const RULE_COLOR: Rule = Rule {
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create color container");
 
-    assert_eq!(
-        extracted.token,
-        Token::Color,
-        "Current token isn't color marker",
-    );
+    check_step(parser, Token::Color)?;
 
     // The pattern for color is:
     // ## [color-style] | [text to be colored] ##
 
     // Gather the color name until the separator
-    let consumption = try_merge(
+    let color = collect_merge(
         log,
-        (extracted, remaining, full_text),
+        parser,
         RULE_COLOR,
-        &[Token::Pipe],
-        &[Token::ParagraphBreak, Token::LineBreak],
-        &[],
-    );
-
-    // Return if failure, and get last token for try_container()
-    let (color, extracted, remaining, mut all_exceptions) =
-        try_consume_last!(remaining, consumption);
+        &[ParseCondition::current(Token::Pipe)],
+        &[
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::current(Token::LineBreak),
+        ],
+    )?;
 
     debug!(
         log,
@@ -63,21 +55,14 @@ fn try_consume_fn<'r, 't>(
     );
 
     // Build color container
-    let consumption = try_collect(
+    let (elements, exceptions) = collect_consume(
         log,
-        (extracted, remaining, full_text),
+        parser,
         RULE_COLOR,
-        &[Token::Color],
-        &[Token::ParagraphBreak],
-        &[],
-        consume,
-    );
-
-    // Append errors, or return if failure
-    let (elements, remaining, mut exceptions) = try_consume!(consumption);
-
-    // Add on new errors
-    all_exceptions.append(&mut exceptions);
+        &[ParseCondition::current(Token::Color)],
+        &[ParseCondition::current(Token::ParagraphBreak)],
+    )?
+    .into();
 
     // Return result
     let element = Element::Color {
@@ -85,5 +70,5 @@ fn try_consume_fn<'r, 't>(
         elements,
     };
 
-    Consumption::warn(element, remaining, all_exceptions)
+    ok!(element, exceptions)
 }

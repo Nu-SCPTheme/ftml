@@ -25,23 +25,24 @@ pub const RULE_SUPERSCRIPT: Rule = Rule {
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create superscript container");
 
-    try_container(
+    check_step(parser, Token::Superscript)?;
+
+    collect_container(
         log,
-        (extracted, remaining, full_text),
-        (RULE_SUPERSCRIPT, ContainerType::Superscript),
-        (Token::Superscript, Token::Superscript),
-        &[Token::ParagraphBreak],
+        parser,
+        RULE_SUPERSCRIPT,
+        ContainerType::Superscript,
+        &[ParseCondition::current(Token::Superscript)],
         &[
-            (Token::Superscript, Token::Whitespace),
-            (Token::Whitespace, Token::Superscript),
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::token_pair(Token::Superscript, Token::Whitespace),
+            ParseCondition::token_pair(Token::Whitespace, Token::Superscript),
         ],
     )
 }

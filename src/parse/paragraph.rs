@@ -18,58 +18,49 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::consume::{consume, Consumption, GenericConsumption};
+use super::condition::ParseCondition;
+use super::consume::consume;
+use super::parser::Parser;
+use super::prelude::*;
 use super::rule::Rule;
 use super::stack::ParagraphStack;
 use super::token::Token;
-use super::upcoming::UpcomingTokens;
-use super::{ParseError, ParseErrorKind};
-use crate::text::FullText;
-use crate::tree::Element;
 
 /// Function to iterate over tokens to produce elements in paragraphs.
 ///
 /// Originally in `parse()`, but was moved out to allow paragraph
 /// extraction deeper in code, such as in the `try_paragraph`
 /// collection helper.
-///
-/// Allows the caller to either pass in a full token list
-/// (such as `parse()` starting at the beginning) or split
-/// (such as `try_consume()`, in the middle of parsing).
-///
-/// See the `UpcomingTokens` enum for more information.
-pub fn gather_paragraphs<'l, 'r, 't>(
-    log: &'l slog::Logger,
-    mut tokens: UpcomingTokens<'r, 't>,
-    full_text: FullText<'t>,
+pub fn gather_paragraphs<'r, 't>(
+    log: &slog::Logger,
+    parser: &mut Parser<'r, 't>,
     rule: Rule,
-    close_tokens: &[Token],
-    invalid_tokens: &[Token],
-) -> GenericConsumption<'r, 't, Vec<Element<'t>>>
+    close_conditions: &[ParseCondition],
+    invalid_conditions: &[ParseCondition],
+) -> ParseResult<'r, 't, Vec<Element<'t>>>
 where
     'r: 't,
 {
     info!(log, "Gathering paragraphs until ending");
 
+    // Update parser rule
+    parser.set_rule(rule);
+
+    // Build paragraph stack
     let mut stack = ParagraphStack::new(log);
 
-    while let Some((extracted, remaining)) = tokens.split() {
-        // Consume tokens to produce the next element
-        let consumption = match extracted.token {
+    loop {
+        let (element, mut exceptions) = match parser.current().token {
             // Avoid an unnecessary Token::Null and just exit
             Token::InputEnd => {
-                if close_tokens.is_empty() {
+                if close_conditions.is_empty() {
                     debug!(log, "Hit the end of input, terminating token iteration");
 
                     break;
                 } else {
                     debug!(log, "Hit the end of input, producing error");
 
-                    return GenericConsumption::err(ParseError::new(
-                        ParseErrorKind::EndOfInput,
-                        rule,
-                        extracted,
-                    ));
+                    return Err(parser.make_error(ParseErrorKind::EndOfInput));
                 }
             }
 
@@ -84,82 +75,49 @@ where
                 stack.end_paragraph();
 
                 // We must manually bump up this pointer because
-                // we 'continue' here, skipping the usual consumption check.
-                tokens.update(remaining);
-
+                // we 'continue' here, skipping the usual pointer update.
+                parser.step()?;
                 continue;
             }
 
             // Ending the paragraph prematurely due to the element ending
-            token if close_tokens.contains(&token) => {
+            _ if parser.evaluate_any(close_conditions) => {
                 debug!(
                     log,
-                    "Hit closing token, returning consumption success";
-                    "token" => token,
+                    "Hit closing condition, returning parsing success";
+                    "token" => parser.current().token,
                 );
 
-                return stack.into_consumption(tokens.slice());
+                return stack.into_result();
             }
 
             // Ending the paragraph prematurely due to an error
-            token if invalid_tokens.contains(&token) => {
+            _ if parser.evaluate_any(invalid_conditions) => {
                 debug!(
                     log,
-                    "Hit failure token, returning consumption failure";
-                    "token" => token,
+                    "Hit failure condition, returning parsing failure";
+                    "token" => parser.current().token,
                 );
 
-                return GenericConsumption::err(ParseError::new(
-                    ParseErrorKind::RuleFailed,
-                    rule,
-                    extracted,
-                ));
+                return Err(parser.make_error(ParseErrorKind::RuleFailed));
             }
 
             // Produce consumption from this token pointer
             _ => {
                 debug!(log, "Trying to consume tokens to produce element");
-                consume(log, &extracted, remaining, full_text)
+                consume(log, parser)
             }
-        };
+        }?
+        .into();
 
-        match consumption {
-            Consumption::Success {
-                item,
-                remaining,
-                mut exceptions,
-            } => {
-                debug!(log, "Tokens successfully consumed to produce element");
+        debug!(log, "Tokens consumed to produce element");
 
-                // Update remaining tokens
-                //
-                // The new value is a subslice of tokens,
-                // equivalent to &tokens[offset..] but without
-                // needing to assert bounds.
-                tokens.update(remaining);
+        // Add the new element to the list
+        stack.push_element(element);
 
-                // Add the new element to the list
-                stack.push_element(item);
-
-                // Process exceptions
-                stack.push_exceptions(&mut exceptions);
-            }
-            Consumption::Failure { error } => {
-                info!(
-                    log,
-                    "Token consumption failed, returned error";
-                    "error-token" => error.token(),
-                    "error-rule" => error.rule(),
-                    "error-span-start" => error.span().start,
-                    "error-span-end" => error.span().end,
-                    "error-kind" => error.kind().name(),
-                );
-
-                // Append the error
-                stack.push_error(error);
-            }
-        }
+        // Process exceptions
+        stack.push_exceptions(&mut exceptions);
     }
 
-    stack.into_consumption(tokens.slice())
+    stack.into_result()
 }

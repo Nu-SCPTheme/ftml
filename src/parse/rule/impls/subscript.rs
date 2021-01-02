@@ -25,23 +25,24 @@ pub const RULE_SUBSCRIPT: Rule = Rule {
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create subscript container");
 
-    try_container(
+    check_step(parser, Token::Subscript)?;
+
+    collect_container(
         log,
-        (extracted, remaining, full_text),
-        (RULE_SUBSCRIPT, ContainerType::Subscript),
-        (Token::Subscript, Token::Subscript),
-        &[Token::ParagraphBreak],
+        parser,
+        RULE_SUBSCRIPT,
+        ContainerType::Subscript,
+        &[ParseCondition::current(Token::Subscript)],
         &[
-            (Token::Subscript, Token::Whitespace),
-            (Token::Whitespace, Token::Subscript),
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::token_pair(Token::Subscript, Token::Whitespace),
+            ParseCondition::token_pair(Token::Whitespace, Token::Subscript),
         ],
     )
 }

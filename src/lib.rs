@@ -54,6 +54,7 @@ extern crate slog;
 extern crate str_macro;
 extern crate strum;
 extern crate strum_macros;
+extern crate unicase;
 extern crate wikidot_normalize;
 
 cfg_if! {
@@ -75,6 +76,7 @@ mod enums;
 mod parse;
 mod preproc;
 mod render;
+mod span_wrap;
 mod text;
 mod tokenize;
 
@@ -85,7 +87,7 @@ pub mod tree;
 pub use self::log::{build_console_logger, build_logger, build_null_logger};
 
 pub use self::parse::{
-    parse, ExtractedToken, ParseError, ParseErrorKind, ParseResult, Token,
+    parse, ExtractedToken, ParseError, ParseErrorKind, ParseOutcome, Token,
 };
 pub use self::preproc::preprocess;
 pub use self::render::*;

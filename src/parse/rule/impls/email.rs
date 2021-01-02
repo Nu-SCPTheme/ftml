@@ -25,13 +25,11 @@ pub const RULE_EMAIL: Rule = Rule {
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    _full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Consuming token as an email");
 
-    Consumption::ok(Element::Email(cow!(extracted.slice)), remaining)
+    ok!(Element::Email(cow!(parser.current().slice)))
 }

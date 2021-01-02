@@ -37,73 +37,52 @@ pub const RULE_LINK_SINGLE_NEW_TAB: Rule = Rule {
     try_consume_fn: link_new_tab,
 };
 
-fn link<'r, 't>(
+fn link<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to create a single-bracket link (regular)");
 
-    try_consume_link(
-        log,
-        extracted,
-        remaining,
-        full_text,
-        RULE_LINK_SINGLE,
-        AnchorTarget::Same,
-    )
+    check_step(parser, Token::LeftBracket)?;
+
+    try_consume_link(log, parser, RULE_LINK_SINGLE, AnchorTarget::Same)
 }
 
-fn link_new_tab<'r, 't>(
+fn link_new_tab<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to create a single-bracket link (new tab)");
 
-    try_consume_link(
-        log,
-        extracted,
-        remaining,
-        full_text,
-        RULE_LINK_SINGLE_NEW_TAB,
-        AnchorTarget::NewTab,
-    )
+    check_step(parser, Token::LeftBracketSpecial)?;
+
+    try_consume_link(log, parser, RULE_LINK_SINGLE_NEW_TAB, AnchorTarget::NewTab)
 }
 
 /// Build a single-bracket link with the given anchor.
-fn try_consume_link<'r, 't>(
+fn try_consume_link<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
+    parser: &'p mut Parser<'r, 't>,
     rule: Rule,
     anchor: AnchorTarget,
-) -> Consumption<'r, 't> {
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create a single-bracket link"; "anchor" => anchor.name());
 
     // Gather path for link
-    let consumption = try_merge(
+    let url = collect_merge(
         log,
-        (extracted, remaining, full_text),
+        parser,
         rule,
-        &[Token::Whitespace],
-        &[Token::RightBracket, Token::ParagraphBreak, Token::LineBreak],
-        &[],
-    );
-
-    // Return if failure, and get last token for try_merge()
-    let (url, extracted, remaining, mut all_exceptions) =
-        try_consume_last!(remaining, consumption);
+        &[ParseCondition::current(Token::Whitespace)],
+        &[
+            ParseCondition::current(Token::RightBracket),
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::current(Token::LineBreak),
+        ],
+    )?;
 
     if !url_valid(url) {
-        return Consumption::err(ParseError::new(
-            ParseErrorKind::InvalidUrl,
-            rule,
-            extracted,
-        ));
+        return Err(parser.make_error(ParseErrorKind::InvalidUrl));
     }
 
     debug!(
@@ -113,17 +92,16 @@ fn try_consume_link<'r, 't>(
     );
 
     // Gather label for link
-    let consumption = try_merge(
+    let label = collect_merge(
         log,
-        (extracted, remaining, full_text),
+        parser,
         rule,
-        &[Token::RightBracket],
-        &[Token::ParagraphBreak, Token::LineBreak],
-        &[],
-    );
-
-    // Append errors, or return if failure
-    let (label, remaining, mut exceptions) = try_consume!(consumption);
+        &[ParseCondition::current(Token::RightBracket)],
+        &[
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::current(Token::LineBreak),
+        ],
+    )?;
 
     debug!(
         log,
@@ -131,11 +109,8 @@ fn try_consume_link<'r, 't>(
         "label" => label,
     );
 
-    // Trimming label
+    // Trim label
     let label = label.trim();
-
-    // Add on new errors
-    all_exceptions.append(&mut exceptions);
 
     // Build link element
     let element = Element::Link {
@@ -145,7 +120,7 @@ fn try_consume_link<'r, 't>(
     };
 
     // Return result
-    Consumption::warn(element, remaining, all_exceptions)
+    ok!(element)
 }
 
 fn url_valid(url: &str) -> bool {

@@ -18,12 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::parse::consume::Consumption;
-use crate::parse::token::ExtractedToken;
-use crate::text::FullText;
+use super::prelude::*;
+use crate::parse::Parser;
 use std::fmt::{self, Debug};
 
-mod collect;
 mod mapping;
 
 pub mod impls;
@@ -33,7 +31,12 @@ pub use self::mapping::{rules_for_token, RULE_MAP};
 /// Defines a rule that can possibly match tokens and return an `Element`.
 #[derive(Copy, Clone)]
 pub struct Rule {
+    /// The name for this rule, in kebab-case.
+    ///
+    /// It is globally unique.
     name: &'static str,
+
+    /// The consumption attempt function for this rule.
     try_consume_fn: TryConsumeFn,
 }
 
@@ -44,16 +47,23 @@ impl Rule {
     }
 
     #[inline]
-    pub fn try_consume<'r, 't>(
+    pub fn try_consume<'p, 'r, 't>(
         self,
         log: &slog::Logger,
-        extract: &'r ExtractedToken<'t>,
-        remaining: &'r [ExtractedToken<'t>],
-        full_text: FullText<'t>,
-    ) -> Consumption<'r, 't> {
+        parser: &'p mut Parser<'r, 't>,
+    ) -> ParseResult<'r, 't, Element<'t>> {
         info!(log, "Trying to consume for parse rule"; "name" => self.name);
 
-        (self.try_consume_fn)(log, extract, remaining, full_text)
+        let mut sub_parser = parser.clone_with_rule(self);
+        let result = (self.try_consume_fn)(log, &mut sub_parser);
+
+        // Run in a separate parser instance,
+        // only keeping the parser state if it succeeded
+        if result.is_ok() {
+            parser.update(&sub_parser);
+        }
+
+        result
     }
 }
 
@@ -61,7 +71,7 @@ impl Debug for Rule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Rule")
             .field("name", &self.name)
-            .field("try_consume_fn", &"<fn pointer>")
+            .field("try_consume_fn", &(self.try_consume_fn as *const ()))
             .finish()
     }
 }
@@ -78,9 +88,7 @@ impl slog::Value for Rule {
 }
 
 /// The function type for actually trying to consume tokens
-pub type TryConsumeFn = for<'r, 't> fn(
+pub type TryConsumeFn = for<'p, 'r, 't> fn(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't>;
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>>;

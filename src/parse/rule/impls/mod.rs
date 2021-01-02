@@ -19,21 +19,27 @@
  */
 
 mod prelude {
-    pub use crate::parse::consume::{consume, Consumption, GenericConsumption};
+    pub use crate::parse::check_step::check_step;
+    pub use crate::parse::collect::*;
+    pub use crate::parse::condition::ParseCondition;
+    pub use crate::parse::consume::consume;
     pub use crate::parse::error::{ParseError, ParseErrorKind, ParseException};
-    pub use crate::parse::rule::collect::*;
-    pub use crate::parse::rule::{Rule, TryConsumeFn};
+    pub use crate::parse::parser::Parser;
+    pub use crate::parse::result::{ParseResult, ParseSuccess};
+    pub use crate::parse::rule::Rule;
     pub use crate::parse::token::{ExtractedToken, Token};
     pub use crate::text::FullText;
     pub use crate::tree::{Container, ContainerType, Element};
 }
 
+mod block;
 mod bold;
 mod color;
 mod comment;
 mod dash;
 mod email;
 mod fallback;
+mod horizontal_rule;
 mod italics;
 mod line_break;
 mod link_anchor;
@@ -51,12 +57,14 @@ mod todo;
 mod underline;
 mod url;
 
+pub use self::block::{RULE_BLOCK, RULE_BLOCK_SPECIAL};
 pub use self::bold::RULE_BOLD;
 pub use self::color::RULE_COLOR;
 pub use self::comment::RULE_COMMENT;
 pub use self::dash::RULE_DASH;
 pub use self::email::RULE_EMAIL;
 pub use self::fallback::RULE_FALLBACK;
+pub use self::horizontal_rule::RULE_HORIZONTAL_RULE;
 pub use self::italics::RULE_ITALICS;
 pub use self::line_break::RULE_LINE_BREAK;
 pub use self::link_anchor::RULE_LINK_ANCHOR;

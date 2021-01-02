@@ -18,15 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::{ExtractedToken, ParseError, ParseException};
-use crate::parse::consume::GenericConsumption;
-use crate::tree::{Container, ContainerType, Element};
+use super::prelude::*;
+use crate::tree::{Container, ContainerType};
 use std::mem;
 
 #[derive(Debug)]
-pub struct ParagraphStack<'l, 't> {
+pub struct ParagraphStack<'t> {
     /// The `slog::Logger` instance used for logging stack operations.
-    log: &'l slog::Logger,
+    log: slog::Logger,
 
     /// Elements being accumulated in the current paragraph.
     current: Vec<Element<'t>>,
@@ -38,11 +37,11 @@ pub struct ParagraphStack<'l, 't> {
     exceptions: Vec<ParseException<'t>>,
 }
 
-impl<'l, 't> ParagraphStack<'l, 't> {
+impl<'t> ParagraphStack<'t> {
     #[inline]
-    pub fn new(log: &'l slog::Logger) -> Self {
+    pub fn new(log: &slog::Logger) -> Self {
         ParagraphStack {
-            log,
+            log: slog::Logger::clone(log),
             current: Vec::new(),
             finished: Vec::new(),
             exceptions: Vec::new(),
@@ -69,17 +68,6 @@ impl<'l, 't> ParagraphStack<'l, 't> {
         );
 
         self.exceptions.append(exceptions);
-    }
-
-    #[inline]
-    pub fn push_error(&mut self, error: ParseError) {
-        debug!(
-            self.log,
-            "Pushing error to stack";
-            "error" => error.kind().name(),
-        );
-
-        self.exceptions.push(ParseException::Error(error));
     }
 
     pub fn build_paragraph(&mut self) -> Option<Element<'t>> {
@@ -118,13 +106,10 @@ impl<'l, 't> ParagraphStack<'l, 't> {
         }
     }
 
-    pub fn into_consumption<'r>(
-        mut self,
-        remaining: &'r [ExtractedToken<'t>],
-    ) -> GenericConsumption<'r, 't, Vec<Element<'t>>> {
+    pub fn into_result<'r>(mut self) -> ParseResult<'r, 't, Vec<Element<'t>>> {
         debug!(
             self.log,
-            "Converting paragraph parse stack into consumption",
+            "Converting paragraph parse stack into ParseResult",
         );
 
         self.end_paragraph();
@@ -136,6 +121,6 @@ impl<'l, 't> ParagraphStack<'l, 't> {
             exceptions,
         } = self;
 
-        GenericConsumption::warn(elements, remaining, exceptions)
+        ok!(elements, exceptions)
     }
 }

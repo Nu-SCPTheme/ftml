@@ -38,19 +38,19 @@ lazy_static! {
             Token::LeftBracketAnchor => vec![RULE_LINK_ANCHOR],
             Token::LeftBracketSpecial => vec![RULE_LINK_SINGLE_NEW_TAB],
             Token::RightBracket => vec![RULE_TEXT],
-            Token::LeftTag => vec![RULE_TODO], // TODO
-            Token::LeftTagSpecial => vec![RULE_TODO], // TODO
-            Token::RightTag => vec![],
-            Token::RightTagEnd => vec![],
-            Token::LeftAnchor => vec![RULE_TODO], // TODO
+            Token::LeftBlock => vec![RULE_BLOCK],
+            Token::LeftBlockEnd => vec![],
+            Token::LeftBlockSpecial => vec![RULE_BLOCK_SPECIAL],
+            Token::RightBlock => vec![],
             Token::DoubleDash => vec![RULE_STRIKETHROUGH, RULE_DASH],
-            Token::TripleDash => vec![RULE_TODO], // TODO
+            Token::TripleDash => vec![RULE_HORIZONTAL_RULE],
             Token::ClearFloatNeutral => vec![RULE_TODO], // TODO
             Token::ClearFloatCenter => vec![RULE_TODO], // TODO
             Token::ClearFloatLeft => vec![RULE_TODO], // TODO
             Token::ClearFloatRight => vec![RULE_TODO], // TODO
             Token::Pipe => vec![RULE_TEXT],
             Token::Equals => vec![RULE_TODO, RULE_TEXT], // TODO
+            Token::Underscore => vec![RULE_TEXT],
             Token::Quote => vec![RULE_TODO, RULE_TEXT], // TODO
             Token::Heading => vec![RULE_TODO, RULE_TEXT], // TODO
             Token::LineBreak => vec![RULE_LINE_BREAK],
@@ -107,6 +107,6 @@ lazy_static! {
 }
 
 #[inline]
-pub fn rules_for_token(extracted: &ExtractedToken) -> &'static [Rule] {
-    &RULE_MAP[extracted.token]
+pub fn rules_for_token(current: &ExtractedToken) -> &'static [Rule] {
+    &RULE_MAP[current.token]
 }

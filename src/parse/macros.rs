@@ -18,39 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/// Return if `GenericConsumption::Failure`, else unwrap the success.
+/// Creates a `ParseResult::Ok` with the given fields.
 ///
-/// This is analogous to `try!` for the `GenericConsumption` enum.
-macro_rules! try_consume {
-    ($consumption:expr) => {
-        match $consumption {
-            GenericConsumption::Failure { error } => {
-                return GenericConsumption::err(error)
-            }
-            GenericConsumption::Success {
-                item,
-                remaining,
-                exceptions,
-            } => (item, remaining, exceptions),
-        }
+/// There are two variants, for if there are exceptions or if there are not.
+macro_rules! ok {
+    ($item:expr,) => {
+        ok!($item, Vec::new())
     };
-}
-
-/// Unwraps a `GenericConsumption`, and then moving the pointer back for a `try_collect` call.
-///
-/// The macro will call `try_consume!`, then run `last_before_slice` to get the previous token.
-///
-/// This is necessary because the `try_collect` functions require the first token to be the opener,
-/// and the following to be its contents.
-macro_rules! try_consume_last {
-    ($remaining:expr, $consumption:expr,) => {
-        try_consume_last!($remaining, $consumption)
+    ($item:expr) => {
+        ok!($item, Vec::new())
     };
-
-    ($remaining:expr, $consumption:expr) => {{
-        let (item, new_remaining, errors) = try_consume!($consumption);
-        let extracted = last_before_slice($remaining, new_remaining);
-
-        (item, extracted, new_remaining, errors)
-    }};
+    ($item:expr, $exceptions:expr,) => {
+        ok!($item, $exceptions)
+    };
+    ($item:expr, $exceptions:expr) => {
+        Ok(ParseSuccess::new($item, $exceptions))
+    };
 }

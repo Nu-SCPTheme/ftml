@@ -25,23 +25,24 @@ pub const RULE_STRIKETHROUGH: Rule = Rule {
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Trying to create strikethrough container");
 
-    try_container(
+    check_step(parser, Token::DoubleDash)?;
+
+    collect_container(
         log,
-        (extracted, remaining, full_text),
-        (RULE_STRIKETHROUGH, ContainerType::Strikethrough),
-        (Token::DoubleDash, Token::DoubleDash),
-        &[Token::ParagraphBreak],
+        parser,
+        RULE_STRIKETHROUGH,
+        ContainerType::Strikethrough,
+        &[ParseCondition::current(Token::DoubleDash)],
         &[
-            (Token::DoubleDash, Token::Whitespace),
-            (Token::Whitespace, Token::DoubleDash),
+            ParseCondition::current(Token::ParagraphBreak),
+            ParseCondition::token_pair(Token::DoubleDash, Token::Whitespace),
+            ParseCondition::token_pair(Token::Whitespace, Token::DoubleDash),
         ],
     )
 }

@@ -18,91 +18,96 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::ParseError;
-use std::borrow::{Borrow, BorrowMut};
+use crate::parse::error::{ParseError, ParseException};
+use std::marker::PhantomData;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ParseResult<T> {
-    value: T,
-    errors: Vec<ParseError>,
+pub type ParseResult<'r, 't, T> = Result<ParseSuccess<'r, 't, T>, ParseError>;
+pub type ParseSuccessTuple<'t, T> = (T, Vec<ParseException<'t>>);
+
+#[must_use]
+#[derive(Debug, Clone)]
+pub struct ParseSuccess<'r, 't, T>
+where
+    'r: 't,
+    T: 't,
+{
+    pub item: T,
+    pub exceptions: Vec<ParseException<'t>>,
+
+    // Marker field to assert that the 'r lifetime is at least as long as 't.
+    #[doc(hidden)]
+    _marker: PhantomData<&'r ()>,
 }
 
-impl<T> ParseResult<T> {
+impl<'r, 't, T> ParseSuccess<'r, 't, T> {
     #[inline]
-    pub fn new<I>(value: T, errors: I) -> Self
+    pub fn new(item: T, exceptions: Vec<ParseException<'t>>) -> Self {
+        ParseSuccess {
+            item,
+            exceptions,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn chain(self, all_exceptions: &mut Vec<ParseException<'t>>) -> T {
+        let ParseSuccess {
+            item,
+            mut exceptions,
+            _marker: PhantomData,
+        } = self;
+
+        // Append previous exceptions
+        all_exceptions.append(&mut exceptions);
+
+        // Return resultant item
+        item
+    }
+}
+
+impl<'r, 't, T> ParseSuccess<'r, 't, T>
+where
+    T: 't,
+{
+    pub fn map<F, U>(self, f: F) -> ParseSuccess<'r, 't, U>
     where
-        I: Into<Vec<ParseError>>,
+        F: FnOnce(T) -> U,
     {
-        ParseResult {
-            value,
-            errors: errors.into(),
+        let ParseSuccess {
+            item, exceptions, ..
+        } = self;
+
+        let new_item = f(item);
+
+        ParseSuccess {
+            item: new_item,
+            exceptions,
+            _marker: PhantomData,
         }
     }
 
-    // Getters
     #[inline]
-    pub fn value(&self) -> &T {
-        &self.value
-    }
-
-    #[inline]
-    pub fn errors(&self) -> &[ParseError] {
-        &self.errors
+    pub fn map_ok<F, U>(self, f: F) -> ParseResult<'r, 't, U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Ok(self.map(f))
     }
 }
 
-impl<U> ParseResult<Vec<U>> {
+impl<'r, 't> ParseSuccess<'r, 't, ()> {
     #[inline]
-    pub fn push(&mut self, item: U) {
-        self.value.push(item);
+    pub fn into_exceptions(self) -> Vec<ParseException<'t>> {
+        self.exceptions
     }
 }
 
-impl<T> Clone for ParseResult<T>
-where
-    T: Clone,
-{
+impl<'r, 't, T> Into<ParseSuccessTuple<'t, T>> for ParseSuccess<'r, 't, T> {
     #[inline]
-    fn clone(&self) -> Self {
-        ParseResult {
-            value: self.value.clone(),
-            errors: self.errors.clone(),
-        }
-    }
-}
+    fn into(self) -> ParseSuccessTuple<'t, T> {
+        let ParseSuccess {
+            item, exceptions, ..
+        } = self;
 
-impl<T> Default for ParseResult<T>
-where
-    T: Default,
-{
-    #[inline]
-    fn default() -> Self {
-        ParseResult {
-            value: T::default(),
-            errors: Vec::new(),
-        }
-    }
-}
-
-impl<T> Borrow<T> for ParseResult<T> {
-    #[inline]
-    fn borrow(&self) -> &T {
-        &self.value
-    }
-}
-
-impl<T> BorrowMut<T> for ParseResult<T> {
-    #[inline]
-    fn borrow_mut(&mut self) -> &mut T {
-        &mut self.value
-    }
-}
-
-impl<T> Into<(T, Vec<ParseError>)> for ParseResult<T> {
-    #[inline]
-    fn into(self) -> (T, Vec<ParseError>) {
-        let ParseResult { value, errors } = self;
-
-        (value, errors)
+        (item, exceptions)
     }
 }

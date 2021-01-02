@@ -19,66 +19,52 @@
  */
 
 use super::prelude::*;
+use crate::span_wrap::SpanWrap;
 
 pub const RULE_COMMENT: Rule = Rule {
     name: "comment",
     try_consume_fn,
 };
 
-fn try_consume_fn<'r, 't>(
+fn try_consume_fn<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    mut remaining: &'r [ExtractedToken<'t>],
-    _full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     debug!(log, "Consuming tokens until end of comment");
 
-    assert_eq!(
-        extracted.token,
-        Token::LeftComment,
-        "Current token isn't a LeftComment",
-    );
+    check_step(parser, Token::LeftComment)?;
 
-    while let Some((new_extracted, new_remaining)) = remaining.split_first() {
-        let ExtractedToken { token, span, slice } = new_extracted;
+    loop {
+        let ExtractedToken { token, span, slice } = parser.current();
+
         debug!(
             log,
             "Received token inside comment";
             "token" => token,
             "slice" => slice,
-            "span-start" => span.start,
-            "span-end" => span.end,
+            "span" => SpanWrap::from(span),
         );
 
-        // Check token
         match token {
             // Hit the end of the comment, return
             Token::RightComment => {
                 trace!(log, "Reached end of comment, returning");
-
-                return Consumption::ok(Element::Null, new_remaining);
+                parser.step()?;
+                return ok!(Element::Null);
             }
 
             // Hit the end of the input, abort
             Token::InputEnd => {
                 trace!(log, "Reached end of input, aborting");
 
-                return Consumption::err(ParseError::new(
-                    ParseErrorKind::EndOfInput,
-                    RULE_COMMENT,
-                    new_extracted,
-                ));
+                return Err(parser.make_error(ParseErrorKind::EndOfInput));
             }
 
             // Consume any other token
             _ => {
                 trace!(log, "Token inside comment received. Discarding.");
-
-                // Update pointer
-                remaining = new_remaining;
+                parser.step()?;
             }
         }
     }
-
-    panic!("Reached end of input without encountering a Token::InputEnd");
 }

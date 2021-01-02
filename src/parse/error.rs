@@ -57,9 +57,9 @@ pub struct ParseError {
 
 impl ParseError {
     #[inline]
-    pub fn new(kind: ParseErrorKind, rule: Rule, extracted: &ExtractedToken) -> Self {
-        let token = extracted.token;
-        let span = Range::clone(&extracted.span);
+    pub fn new(kind: ParseErrorKind, rule: Rule, current: &ExtractedToken) -> Self {
+        let token = current.token;
+        let span = Range::clone(&current.span);
         let rule = cow!(rule.name());
 
         ParseError {
@@ -110,6 +110,30 @@ pub enum ParseErrorKind {
     /// Attempting to match this rule failed, falling back to try an alternate.
     RuleFailed,
 
+    /// There is no rule for the block name specified.
+    NoSuchBlock,
+
+    /// This block does not allow special invocation.
+    InvalidSpecialBlock,
+
+    /// This block does not have a name.
+    BlockMissingName,
+
+    /// This block does not have close brackets when required.
+    BlockMissingCloseBrackets,
+
+    /// Encountered malformed arguments when parsing block.
+    BlockMalformedArguments,
+
+    /// This block expects a line break here.
+    BlockExpectedLineBreak,
+
+    /// This block expected to end its body here.
+    BlockExpectedEnd,
+
+    /// An end block was found, but of the incorrect type.
+    BlockEndMismatch,
+
     /// The URL passed here was invalid.
     InvalidUrl,
 }
@@ -118,5 +142,16 @@ impl ParseErrorKind {
     #[inline]
     pub fn name(self) -> &'static str {
         self.into()
+    }
+}
+
+impl slog::Value for ParseErrorKind {
+    fn serialize(
+        &self,
+        _: &slog::Record,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        serializer.emit_str(key, self.name())
     }
 }

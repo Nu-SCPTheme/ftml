@@ -21,6 +21,7 @@
 #[cfg(test)]
 mod test;
 
+use crate::span_wrap::SpanWrap;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::ops::Range;
@@ -49,11 +50,10 @@ pub enum Token {
     LeftBracketAnchor,
     LeftBracketSpecial,
     RightBracket,
-    LeftTag,
-    LeftTagSpecial,
-    RightTag,
-    RightTagEnd,
-    LeftAnchor,
+    LeftBlock,
+    LeftBlockEnd,
+    LeftBlockSpecial,
+    RightBlock,
     DoubleDash,
     TripleDash,
     ClearFloatNeutral,
@@ -62,6 +62,7 @@ pub enum Token {
     ClearFloatRight,
     Pipe,
     Equals,
+    Underscore,
     Quote,
     Heading,
 
@@ -168,6 +169,7 @@ impl Token {
         let slice = pair.as_str();
         let start = pair.as_span().start();
         let end = pair.as_span().end();
+        let span = start..end;
 
         // Get matching Token.
         let token = Token::get_from_rule(rule);
@@ -177,11 +179,9 @@ impl Token {
             "Converting pair '{:?}' into token", rule;
             "token" => token.name(),
             "slice" => pair.as_str(),
-            "span-start" => start,
-            "span-end" => end,
+            "span" => SpanWrap::from(&span),
         );
 
-        let span = start..end;
         ExtractedToken { token, slice, span }
     }
 
@@ -195,10 +195,10 @@ impl Token {
             Rule::left_bracket_anchor => Token::LeftBracketAnchor,
             Rule::left_bracket_special => Token::LeftBracketSpecial,
             Rule::right_bracket => Token::RightBracket,
-            Rule::left_tag => Token::LeftTag,
-            Rule::left_tag_special => Token::LeftTagSpecial,
-            Rule::right_tag => Token::RightTag,
-            Rule::right_tag_end => Token::RightTagEnd,
+            Rule::left_block => Token::LeftBlock,
+            Rule::left_block_end => Token::LeftBlockEnd,
+            Rule::left_block_special => Token::LeftBlockSpecial,
+            Rule::right_block => Token::RightBlock,
             Rule::color => Token::Color,
             Rule::double_dash => Token::DoubleDash,
             Rule::triple_dash => Token::TripleDash,
@@ -207,6 +207,7 @@ impl Token {
             Rule::clear_float_left => Token::ClearFloatLeft,
             Rule::clear_float_right => Token::ClearFloatRight,
             Rule::pipe => Token::Pipe,
+            Rule::underscore => Token::Underscore,
             Rule::equals => Token::Equals,
             Rule::quote => Token::Quote,
             Rule::heading => Token::Heading,

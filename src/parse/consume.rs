@@ -26,158 +26,74 @@
 //! The parser is not disambiguous because any string of tokens can be interpreted
 //! as raw text as a fallback, which is how Wikidot does it.
 
+use super::prelude::*;
 use super::rule::{impls::RULE_FALLBACK, rules_for_token};
-use super::token::ExtractedToken;
-use super::{ParseError, ParseErrorKind, ParseException};
-use crate::text::FullText;
-use crate::tree::Element;
+use super::Parser;
+use crate::span_wrap::SpanWrap;
 use std::mem;
 
 /// Main function that consumes tokens to produce a single element, then returns.
-pub fn consume<'r, 't>(
+///
+/// It will use the fallback if all rules, fail, so the only failure case is if
+/// the end of the input is reached.
+pub fn consume<'p, 'r, 't>(
     log: &slog::Logger,
-    extracted: &'r ExtractedToken<'t>,
-    remaining: &'r [ExtractedToken<'t>],
-    full_text: FullText<'t>,
-) -> Consumption<'r, 't> {
-    let ExtractedToken { token, slice, span } = extracted;
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
     let log = &log.new(slog_o!(
-        "token" => str!(token.name()),
-        "slice" => str!(slice),
-        "span-start" => span.start,
-        "span-end" => span.end,
-        "remaining-len" => remaining.len(),
+        "token" => parser.current().token,
+        "slice" => str!(parser.current().slice),
+        "span" => SpanWrap::from(&parser.current().span),
+        "remaining-len" => parser.remaining().len(),
     ));
 
     debug!(log, "Looking for valid rules");
 
     let mut all_exceptions = Vec::new();
+    let current = parser.current();
 
-    for rule in rules_for_token(extracted) {
+    for &rule in rules_for_token(current) {
         info!(log, "Trying rule consumption for tokens"; "rule" => rule);
 
-        let consumption = rule.try_consume(log, extracted, remaining, full_text);
-        if consumption.is_success() {
-            debug!(log, "Rule matched, returning generated result"; "rule" => rule);
+        let old_remaining = parser.remaining();
+        match rule.try_consume(log, parser) {
+            Ok(output) => {
+                debug!(log, "Rule matched, returning generated result"; "rule" => rule);
 
-            // Explicitly drop exceptions
-            //
-            // We're returning the successful consumption
-            // so these are going to be dropped as a previously
-            // unsuccessful attempts.
-            mem::drop(all_exceptions);
+                // If the pointer hasn't moved, we step one token.
+                if parser.same_pointer(old_remaining) {
+                    parser.step()?;
+                }
 
-            return consumption;
-        }
+                // Explicitly drop exceptions
+                //
+                // We're returning the successful consumption
+                // so these are going to be dropped as a previously
+                // unsuccessful attempts.
+                mem::drop(all_exceptions);
 
-        // Extract errors for appending
-        match consumption {
-            Consumption::Success { mut exceptions, .. } => {
-                all_exceptions.append(&mut exceptions);
+                return Ok(output);
             }
-            Consumption::Failure { error } => {
+            Err(error) => {
                 all_exceptions.push(ParseException::Error(error));
             }
         }
     }
 
     debug!(log, "All rules exhausted, using generic text fallback");
-
-    trace!(log, "Removing non-errors from exceptions list");
+    let element = text!(current.slice);
+    parser.step()?;
 
     // We should only carry styles over from *successful* consumptions
+    trace!(log, "Removing non-errors from exceptions list");
     all_exceptions.retain(|exception| matches!(exception, ParseException::Error(_)));
 
     trace!(log, "Adding fallback error to exceptions list");
-
     all_exceptions.push(ParseException::Error(ParseError::new(
         ParseErrorKind::NoRulesMatch,
         RULE_FALLBACK,
-        extracted,
+        current,
     )));
 
-    Consumption::warn(text!(slice), remaining, all_exceptions)
+    ok!(element, all_exceptions)
 }
-
-#[derive(Debug, Clone)]
-pub enum GenericConsumption<'r, 't, T>
-where
-    T: 't,
-    'r: 't,
-{
-    Success {
-        item: T,
-        remaining: &'r [ExtractedToken<'t>],
-        exceptions: Vec<ParseException<'t>>,
-    },
-    Failure {
-        error: ParseError,
-    },
-}
-
-impl<'r, 't, T> GenericConsumption<'r, 't, T>
-where
-    T: 't,
-{
-    #[inline]
-    pub fn ok(item: T, remaining: &'r [ExtractedToken<'t>]) -> Self {
-        GenericConsumption::Success {
-            item,
-            remaining,
-            exceptions: Vec::new(),
-        }
-    }
-
-    #[inline]
-    pub fn warn(
-        item: T,
-        remaining: &'r [ExtractedToken<'t>],
-        exceptions: Vec<ParseException<'t>>,
-    ) -> Self {
-        GenericConsumption::Success {
-            item,
-            remaining,
-            exceptions,
-        }
-    }
-
-    #[inline]
-    pub fn err(error: ParseError) -> Self {
-        GenericConsumption::Failure { error }
-    }
-
-    #[inline]
-    pub fn is_success(&self) -> bool {
-        match self {
-            GenericConsumption::Success { .. } => true,
-            GenericConsumption::Failure { .. } => false,
-        }
-    }
-
-    #[inline]
-    pub fn map<F, U>(self, f: F) -> GenericConsumption<'r, 't, U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        match self {
-            GenericConsumption::Failure { error } => {
-                GenericConsumption::Failure { error }
-            }
-            GenericConsumption::Success {
-                item,
-                remaining,
-                exceptions,
-            } => {
-                let item = f(item);
-
-                GenericConsumption::Success {
-                    item,
-                    remaining,
-                    exceptions,
-                }
-            }
-        }
-    }
-}
-
-pub type Consumption<'r, 't> = GenericConsumption<'r, 't, Element<'t>>;

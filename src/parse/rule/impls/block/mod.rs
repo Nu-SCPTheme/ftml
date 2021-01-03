@@ -18,9 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// TODO while refactoring Parser
-#![allow(dead_code)]
-
 //! Meta-rule for all block constructs.
 //!
 //! This matches `[[` or `[[*` and runs the block parsing
@@ -88,9 +85,18 @@ impl BlockRule {
     }
 }
 
+/// Function pointer type to implement block parsing.
+///
+/// The arguments are, in order:
+/// * `log` -- Logger instance
+/// * `parser` -- Parser instance
+/// * `name` -- The name of the block
+/// * `special` -- Whether this block is `[[*` (special) or `[[` (regular)
+/// * `in_block` -- Whether we're still in the block head, or if it's finished
 pub type BlockParseFn = for<'p, 'r, 't> fn(
     &slog::Logger,
     &'p mut BlockParser<'p, 'r, 't>,
     &'t str,
+    bool,
     bool,
 ) -> ParseResult<'r, 't, Element<'t>>;

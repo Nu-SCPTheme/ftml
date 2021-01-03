@@ -1,5 +1,5 @@
 {
-    "input": "[[code type=\"css\"]]\napple banana\n[[/code]]",
+    "input": "[[code]]\nmultiple\n**lines**\nof\ncode\n[[/code]]",
     "tree": {
         "elements": [
             {
@@ -10,8 +10,8 @@
                         {
                             "element": "code",
                             "data": {
-                                "contents": "apple banana",
-                                "language": "css"
+                                "contents": "multiple\n**lines**\nof\ncode",
+                                "language": null
                             }
                         }
                     ]

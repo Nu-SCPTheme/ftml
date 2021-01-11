@@ -20,8 +20,9 @@
 
 //! Retrieves tests from JSON in the root `/test` directory, and runs them.
 
-use crate::parse::ParseWarning;
-use crate::tree::SyntaxTree;
+use crate::parse::{ParseWarning, ParseWarningKind, Token};
+use crate::tree::{Element, SyntaxTree};
+use std::borrow::Cow;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
@@ -179,4 +180,47 @@ fn ast() {
     for test in tests {
         test.run(&log);
     }
+}
+
+/// Test the parser's recursion limit.
+///
+/// Manually-implemented test, since this test would be
+/// tremendously huge on disk as a JSON file, and
+/// also goes past serde_json's recursion limit, lol.
+#[test]
+fn recursion_depth() {
+    let log = crate::build_logger();
+
+    // Build wikitext input
+    let mut input = String::new();
+
+    for _ in 0..101 {
+        input.push_str("[[div]]\n");
+    }
+
+    for _ in 0..101 {
+        input.push_str("[[/div]]\n");
+    }
+
+    // Run parser steps
+    let tokens = crate::tokenize(&log, &input);
+    let (tree, warnings) = crate::parse(&log, &tokens).into();
+
+    // Check outputted warnings
+    let warning = warnings.get(0).expect("No warnings produced");
+    assert_eq!(warning.token(), Token::LeftBlock);
+    assert_eq!(warning.rule(), "block-div");
+    assert_eq!(warning.span(), 800..802);
+    assert_eq!(warning.kind(), ParseWarningKind::RecursionDepthExceeded);
+
+    // Check syntax tree
+    //
+    // It outputs the entire input string as text
+
+    let SyntaxTree { elements, .. } = tree;
+    assert_eq!(elements.len(), 1);
+
+    let element = elements.get(0).expect("No elements produced");
+    let input_cow = Cow::Borrowed(input.as_ref());
+    assert_eq!(element, &Element::Text(input_cow));
 }

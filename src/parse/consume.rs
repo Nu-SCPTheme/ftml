@@ -47,8 +47,11 @@ pub fn consume<'p, 'r, 't>(
         "remaining-len" => parser.remaining().len(),
     ));
 
-    debug!(log, "Looking for valid rules");
+    // Incrementing recursion depth
+    // Will fail if we're too many layers in
+    parser.depth_increment()?;
 
+    debug!(log, "Looking for valid rules");
     let mut all_exceptions = Vec::new();
     let current = parser.current();
 
@@ -72,6 +75,9 @@ pub fn consume<'p, 'r, 't>(
                 // unsuccessful attempts.
                 mem::drop(all_exceptions);
 
+                // Decrement recursion depth
+                parser.depth_decrement();
+
                 return Ok(output);
             }
             Err(warning) => {
@@ -88,12 +94,23 @@ pub fn consume<'p, 'r, 't>(
     trace!(log, "Removing non-warnings from exceptions list");
     all_exceptions.retain(|exception| matches!(exception, ParseException::Warning(_)));
 
-    trace!(log, "Adding fallback warning to exceptions list");
+    // If we've hit the recursion limit, just bail
+    if let Some(ParseException::Warning(warning)) = all_exceptions.last() {
+        if warning.kind() == ParseWarningKind::RecursionDepthExceeded {
+            trace!(log, "Found recursion depth error, failing");
+            return Err(warning.clone());
+        }
+    }
+
+    // Add fallback warning to exceptions list
     all_exceptions.push(ParseException::Warning(ParseWarning::new(
         ParseWarningKind::NoRulesMatch,
         RULE_FALLBACK,
         current,
     )));
+
+    // Decrement recursion depth
+    parser.depth_decrement();
 
     ok!(element, all_exceptions)
 }

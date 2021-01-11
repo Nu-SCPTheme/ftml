@@ -20,7 +20,6 @@
 
 use super::super::prelude::*;
 use super::mapping::get_block_rule_with_name;
-use super::BlockParser;
 
 pub const RULE_BLOCK: Rule = Rule {
     name: "block",
@@ -32,31 +31,83 @@ pub const RULE_BLOCK_SPECIAL: Rule = Rule {
     try_consume_fn: block_special,
 };
 
+pub const RULE_BLOCK_SKIP: Rule = Rule {
+    name: "block-skip",
+    try_consume_fn: block_skip,
+};
+
 // Rule implementations
 
-fn block_regular<'p, 'r, 't>(
+fn block_regular<'r, 't>(
     log: &slog::Logger,
-    parser: &'p mut Parser<'r, 't>,
+    parser: &mut Parser<'r, 't>,
 ) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to process a block");
 
     parse_block(log, parser, false)
 }
 
-fn block_special<'p, 'r, 't>(
+fn block_special<'r, 't>(
     log: &slog::Logger,
-    parser: &'p mut Parser<'r, 't>,
+    parser: &mut Parser<'r, 't>,
 ) -> ParseResult<'r, 't, Element<'t>> {
     trace!(log, "Trying to process a block (with special)");
 
     parse_block(log, parser, true)
 }
 
+fn block_skip<'r, 't>(
+    log: &slog::Logger,
+    parser: &mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
+    trace!(
+        log,
+        "Trying to see if we skip a newline due to upcoming block",
+    );
+
+    assert_eq!(
+        parser.current().token,
+        Token::LineBreak,
+        "Trying to skip because block, but current is not line break",
+    );
+
+    let current = parser.step()?;
+
+    // See if there's a block upcoming
+    let result = parser.evaluate_fn(|parser| {
+        // Make sure this is the start of a block
+        if current.token != Token::LeftBlock && current.token != Token::LeftBlockSpecial {
+            return Ok(false);
+        }
+
+        // Get the block's name
+        let (name, _) = parser.get_block_name()?;
+
+        // Get the associated block rule
+        let block = match get_block_rule_with_name(name) {
+            Some(block) => block,
+            None => return Ok(false),
+        };
+
+        // Now, if it wants newlines, ignore this newline.
+        // The rule will succeed.
+        //
+        // If it doesn't, let the rule fail. Then it will pass on to a fallback.
+        Ok(block.newline_separator)
+    });
+
+    if result {
+        ok!(Element::Null)
+    } else {
+        Err(parser.make_error(ParseErrorKind::RuleFailed))
+    }
+}
+
 // Block parsing implementation
 
-fn parse_block<'p, 'r, 't>(
+fn parse_block<'r, 't>(
     log: &slog::Logger,
-    parser: &'p mut Parser<'r, 't>,
+    parser: &mut Parser<'r, 't>,
     special: bool,
 ) -> ParseResult<'r, 't, Element<'t>>
 where
@@ -68,7 +119,12 @@ where
         "special" => special,
     );
 
-    let mut parser = BlockParser::new(log, parser, special);
+    // Set general rule based on presence of special
+    parser.set_rule(if special {
+        RULE_BLOCK_SPECIAL
+    } else {
+        RULE_BLOCK
+    });
 
     // Get block name
     parser.get_optional_space()?;
@@ -94,5 +150,5 @@ where
     // This is responsible for parsing any arguments,
     // and terminating the block (the ']]' token),
     // then processing the body (if any) and close tag.
-    (block.parse_fn)(log, &mut parser, name, special, in_block)
+    (block.parse_fn)(log, parser, name, special, in_block)
 }

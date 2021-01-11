@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/impls/mod.rs
+ * parse/rule/impls/block/blocks/mod.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -19,9 +19,10 @@
  */
 
 mod prelude {
-    pub use super::super::{BlockParser, BlockRule};
+    pub use super::super::{Arguments, BlockRule};
     pub use crate::parse::collect::*;
     pub use crate::parse::condition::ParseCondition;
+    pub use crate::parse::parser::Parser;
     pub use crate::parse::prelude::*;
     pub use crate::parse::{ParseError, Token};
     pub use crate::tree::Element;

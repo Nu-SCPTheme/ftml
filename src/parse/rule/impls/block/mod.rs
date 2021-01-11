@@ -28,16 +28,17 @@ use crate::parse::result::ParseResult;
 use crate::parse::rule::Rule;
 use crate::parse::Parser;
 use crate::tree::Element;
+use std::fmt::{self, Debug};
 
 mod arguments;
 mod mapping;
 mod parser;
 mod rule;
 
-pub mod impls;
+pub mod blocks;
 
-pub use self::parser::BlockParser;
-pub use self::rule::{RULE_BLOCK, RULE_BLOCK_SPECIAL};
+pub use self::arguments::Arguments;
+pub use self::rule::{RULE_BLOCK, RULE_BLOCK_SKIP, RULE_BLOCK_SPECIAL};
 
 /// Define a rule for how to parse a block.
 #[derive(Clone)]
@@ -59,6 +60,9 @@ pub struct BlockRule {
     /// For instance, user can be invoked as both
     /// `[[user aismallard]]` and `[[*user aismallard]]`.
     accepts_special: bool,
+
+    /// Whether this block wants its head and tail to be separated by newlines.
+    newline_separator: bool,
 
     /// Function which implements the processing for this rule.
     parse_fn: BlockParseFn,
@@ -85,6 +89,16 @@ impl BlockRule {
     }
 }
 
+impl Debug for BlockRule {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("BlockRule")
+            .field("name", &self.name)
+            .field("accepts_names", &self.accepts_names)
+            .field("parse_fn", &(self.parse_fn as *const ()))
+            .finish()
+    }
+}
+
 /// Function pointer type to implement block parsing.
 ///
 /// The arguments are, in order:
@@ -93,9 +107,9 @@ impl BlockRule {
 /// * `name` -- The name of the block
 /// * `special` -- Whether this block is `[[*` (special) or `[[` (regular)
 /// * `in_block` -- Whether we're still in the block head, or if it's finished
-pub type BlockParseFn = for<'p, 'r, 't> fn(
+pub type BlockParseFn = for<'r, 't> fn(
     &slog::Logger,
-    &'p mut BlockParser<'p, 'r, 't>,
+    &mut Parser<'r, 't>,
     &'t str,
     bool,
     bool,

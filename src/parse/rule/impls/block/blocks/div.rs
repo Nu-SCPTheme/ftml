@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/impls/div.rs
+ * parse/rule/impls/block/blocks/div.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -18,28 +18,38 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// TODO while refactoring Parser
-#![allow(unused_variables)]
-
 use super::prelude::*;
 
 pub const BLOCK_DIV: BlockRule = BlockRule {
     name: "block-div",
     accepts_names: &["div", "div_"],
     accepts_special: false,
+    newline_separator: true,
     parse_fn,
 };
 
-fn parse_fn<'p, 'r, 't>(
+fn parse_fn<'r, 't>(
     log: &slog::Logger,
-    parser: &'p mut BlockParser<'p, 'r, 't>,
+    parser: &mut Parser<'r, 't>,
     name: &'t str,
     special: bool,
     in_block: bool,
 ) -> ParseResult<'r, 't, Element<'t>> {
+    debug!(
+        log,
+        "Parsing div block";
+        "in-block" => in_block,
+        "name" => name,
+    );
+
     assert_eq!(special, false, "Code doesn't allow special variant");
 
-    let mut arguments = parser.get_argument_map()?;
+    let mut arguments = if in_block {
+        parser.get_argument_map()?
+    } else {
+        Arguments::new()
+    };
+
     parser.get_line_break()?;
 
     // "div" means we wrap in paragraphs, like normal
@@ -51,32 +61,18 @@ fn parse_fn<'p, 'r, 't>(
     let class = arguments.get("class");
     let style = arguments.get("style");
 
-    todo!()
+    // Get body content, based on whether we want paragraphs or not
+    let (elements, exceptions) = parser
+        .get_body_elements(&BLOCK_DIV, wrap_paragraphs)?
+        .into();
 
-    //// Gather elements for div contents
-    //let (elements, exceptions) = {
-    //    if wrap_paragraphs {
-    //        let consumption = try_paragraphs(
-    //            log,
-    //            parser.state(),
-    //            BLOCK_DIV.rule(),
-    //            &[Token::LeftBlockEnd], // TODO this is insufficient ugh
-    //            &[],
-    //        );
+    // Build element and return
+    let element = Element::Div {
+        elements,
+        id,
+        class,
+        style,
+    };
 
-    //        todo!()
-    //    } else {
-    //        todo!()
-    //    }
-    //};
-
-    //// Build element and return
-    //let element = Element::Div {
-    //    elements,
-    //    id,
-    //    class,
-    //    style,
-    //};
-
-    //ok!(element, exceptions)
+    ok!(element, exceptions)
 }

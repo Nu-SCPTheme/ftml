@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/impls/code.rs
+ * parse/rule/impls/block/blocks/code.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -24,16 +24,19 @@ pub const BLOCK_CODE: BlockRule = BlockRule {
     name: "block-code",
     accepts_names: &["code"],
     accepts_special: false,
+    newline_separator: true,
     parse_fn,
 };
 
-fn parse_fn<'p, 'r, 't>(
+fn parse_fn<'r, 't>(
     log: &slog::Logger,
-    parser: &'p mut BlockParser<'p, 'r, 't>,
+    parser: &mut Parser<'r, 't>,
     name: &'t str,
     special: bool,
     in_block: bool,
 ) -> ParseResult<'r, 't, Element<'t>> {
+    debug!(log, "Parsing code block"; "in-block" => in_block);
+
     assert_eq!(special, false, "Code doesn't allow special variant");
     assert!(
         name.eq_ignore_ascii_case("code"),
@@ -41,50 +44,12 @@ fn parse_fn<'p, 'r, 't>(
     );
 
     let language = if in_block {
-        let mut arguments = parser.get_argument_map()?;
-        arguments.get("type")
+        parser.get_argument_map()?.get("type")
     } else {
         None
     };
 
-    // The block must be on its own line
-    parser.get_line_break()?;
-
-    let mut first = true;
-    let start = parser.current();
-    let end;
-
-    // Keep iterating until we find the end.
-    // Preserve parse progress if we've hit the end block.
-    loop {
-        let at_end_block = parser.save_evaluate_fn(|parser| {
-            // Check that "[[/code]]" is on a new line.
-            if !first {
-                parser.get_line_break()?;
-            }
-
-            // Check if it's an end block
-            //
-            // This will ignore any errors produced,
-            // since it's just more code
-            let name = parser.get_end_block()?;
-
-            // Check if it's the right kind
-            let is_code = name.eq_ignore_ascii_case("code");
-
-            Ok(is_code)
-        });
-
-        if let Some(last_token) = at_end_block {
-            end = last_token;
-            break;
-        }
-
-        parser.step()?;
-        first = false;
-    }
-
-    let code = parser.full_text().slice_partial(log, start, end);
+    let code = parser.get_body_text(&BLOCK_CODE)?;
     let element = Element::Code {
         contents: cow!(code),
         language,

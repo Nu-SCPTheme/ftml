@@ -59,8 +59,8 @@ impl<'r, 't> Parser<'r, 't> {
 
     // Getters
     #[inline]
-    pub fn log(&self) -> &slog::Logger {
-        &self.log
+    pub fn log(&self) -> slog::Logger {
+        slog::Logger::clone(&self.log)
     }
 
     #[inline]
@@ -98,22 +98,44 @@ impl<'r, 't> Parser<'r, 't> {
 
         match condition {
             ParseCondition::CurrentToken { token } => self.current.token == token,
-            ParseCondition::Function { f } => self.evaluate_fn(f),
-            ParseCondition::TokenPair { current, next } => self.evaluate_fn(|parser| {
-                macro_rules! check {
-                    ($expected:expr) => {
-                        if parser.current().token != $expected {
-                            return Ok(false);
-                        }
-                    };
+            ParseCondition::TokenPair { current, next } => {
+                if self.current().token != current {
+                    trace!(
+                        &self.log,
+                        "Current token in pair doesn't match, failing";
+                        "expected" => current,
+                        "actual" => self.current().token,
+                    );
+
+                    return false;
                 }
 
-                check!(current);
-                parser.step()?;
-                check!(next);
+                match self.look_ahead(0) {
+                    Some(actual) => {
+                        if actual.token != next {
+                            trace!(
+                                &self.log,
+                                "Second token in pair doesn't match, failing";
+                                "expected" => next,
+                                "actual" => actual.token,
+                            );
 
-                Ok(false)
-            }),
+                            return false;
+                        }
+                    }
+                    None => {
+                        trace!(
+                            &self.log,
+                            "Second token in pair doesn't exist, failing";
+                            "expected" => next,
+                        );
+
+                        return false;
+                    }
+                }
+
+                true
+            }
         }
     }
 
@@ -136,6 +158,25 @@ impl<'r, 't> Parser<'r, 't> {
         debug!(&self.log, "Evaluating closure for parser condition");
 
         f(&mut self.clone()).unwrap_or(false)
+    }
+
+    pub fn save_evaluate_fn<F>(&mut self, f: F) -> Option<&'r ExtractedToken<'t>>
+    where
+        F: FnOnce(&mut Parser<'r, 't>) -> Result<bool, ParseError>,
+    {
+        debug!(
+            &self.log,
+            "Evaluating closure for parser condition, saving progress on success",
+        );
+
+        let mut parser = self.clone();
+        if f(&mut parser).unwrap_or(false) {
+            let last = self.current;
+            self.update(&parser);
+            Some(last)
+        } else {
+            None
+        }
     }
 
     // Token pointer state and manipulation

@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/blocks/mod.rs
+ * parse/boolean.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -18,24 +18,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-mod prelude {
-    pub use super::super::{Arguments, BlockRule};
-    pub use crate::parse::collect::*;
-    pub use crate::parse::condition::ParseCondition;
-    pub use crate::parse::parser::Parser;
-    pub use crate::parse::prelude::*;
-    pub use crate::parse::{ParseWarning, Token};
-    pub use crate::tree::Element;
+/// Parse a boolean string into its corresponding value.
+pub fn parse_boolean<S: AsRef<str>>(s: S) -> Result<bool, ()> {
+    const NAMES: [(&str, bool); 8] = [
+        ("true", true),
+        ("false", false),
+        ("t", true),
+        ("f", false),
+        ("1", true),
+        ("0", false),
+        ("yes", true),
+        ("no", false),
+    ];
+
+    let s = s.as_ref().trim();
+    for &(name, value) in &NAMES {
+        if name.eq_ignore_ascii_case(s) {
+            return Ok(value);
+        }
+    }
+
+    Err(())
 }
-
-mod code;
-mod collapsible;
-mod css;
-mod div;
-mod lines;
-
-pub use self::code::BLOCK_CODE;
-pub use self::collapsible::BLOCK_COLLAPSIBLE;
-pub use self::css::BLOCK_CSS;
-pub use self::div::BLOCK_DIV;
-pub use self::lines::BLOCK_LINES;

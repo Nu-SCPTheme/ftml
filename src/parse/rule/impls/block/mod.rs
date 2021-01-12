@@ -94,6 +94,8 @@ impl Debug for BlockRule {
         f.debug_struct("BlockRule")
             .field("name", &self.name)
             .field("accepts_names", &self.accepts_names)
+            .field("accepts_special", &self.accepts_special)
+            .field("newline_separator", &self.newline_separator)
             .field("parse_fn", &(self.parse_fn as *const ()))
             .finish()
     }
@@ -106,7 +108,7 @@ impl Debug for BlockRule {
 /// * `parser` -- Parser instance
 /// * `name` -- The name of the block
 /// * `special` -- Whether this block is `[[*` (special) or `[[` (regular)
-/// * `in_block` -- Whether we're still in the block head, or if it's finished
+/// * `in_head` -- Whether we're still in the block head, or if it's finished
 pub type BlockParseFn = for<'r, 't> fn(
     &slog::Logger,
     &mut Parser<'r, 't>,

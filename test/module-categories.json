@@ -1,5 +1,5 @@
 {
-    "input": "Banana\n[[newlines 9]]\nApple",
+    "input": "[[module Categories]]\nApple",
     "tree": {
         "elements": [
             {
@@ -8,12 +8,13 @@
                     "type": "paragraph",
                     "elements": [
                         {
-                            "element": "text",
-                            "data": "Banana"
-                        },
-                        {
-                            "element": "line-breaks",
-                            "data": 9
+                            "element": "module",
+                            "data": {
+                                "module": "categories",
+                                "data": {
+                                    "include-hidden": false
+                                }
+                            }
                         },
                         {
                             "element": "text",

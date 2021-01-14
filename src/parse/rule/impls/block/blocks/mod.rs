@@ -26,6 +26,32 @@ mod prelude {
     pub use crate::parse::prelude::*;
     pub use crate::parse::{ParseWarning, Token};
     pub use crate::tree::Element;
+
+    #[cfg(debug)]
+    pub fn assert_generic_name(
+        expected_names: &[&str],
+        actual_name: &str,
+        name_type: &str,
+    ) {
+        for name in expected_names {
+            if name.eq_ignore_ascii_case(actual_name) {
+                return;
+            }
+        }
+
+        panic!(
+            "Actual {} name doesn't match any expected: {:?} (was {})",
+            name_type, expected_names, actual_name,
+        );
+    }
+
+    #[cfg(not(debug))]
+    pub fn assert_generic_name(_: &[&str], _: &str, _: &str) {}
+
+    #[inline]
+    pub fn assert_block_name(block_rule: &BlockRule, actual_name: &str) {
+        assert_generic_name(block_rule.accepts_names, actual_name, "block")
+    }
 }
 
 mod code;
@@ -33,9 +59,11 @@ mod collapsible;
 mod css;
 mod div;
 mod lines;
+mod module;
 
 pub use self::code::BLOCK_CODE;
 pub use self::collapsible::BLOCK_COLLAPSIBLE;
 pub use self::css::BLOCK_CSS;
 pub use self::div::BLOCK_DIV;
 pub use self::lines::BLOCK_LINES;
+pub use self::module::BLOCK_MODULE;

@@ -93,6 +93,13 @@ where
         self.get_optional_space()?;
 
         // Collect block name and determine whether the head is done
+        self.get_block_name_internal(ParseWarningKind::BlockMissingName)
+    }
+
+    fn get_block_name_internal(
+        &mut self,
+        kind: ParseWarningKind,
+    ) -> Result<(&'t str, bool), ParseWarning> {
         collect_text_keep(
             &self.log(),
             self,
@@ -105,7 +112,7 @@ where
                 ParseCondition::current(Token::ParagraphBreak),
                 ParseCondition::current(Token::LineBreak),
             ],
-            Some(ParseWarningKind::BlockMissingName),
+            Some(kind),
         )
         .map(|(name, last)| {
             let name = name.trim();
@@ -355,6 +362,35 @@ where
 
         self.get_head_block(block_rule, in_head)?;
         Ok(map)
+    }
+
+    pub fn get_head_name_map(
+        &mut self,
+        block_rule: &BlockRule,
+        in_head: bool,
+    ) -> Result<(&'t str, Arguments<'t>), ParseWarning> {
+        debug!(
+            &self.log(),
+            "Looking for a name, then key value arguments, then ']]'"
+        );
+
+        if !in_head {
+            debug!(
+                &self.log(),
+                "Block is already over, there is no name or arguments",
+            );
+
+            return Err(self.make_warn(ParseWarningKind::BlockMissingName));
+        }
+
+        // Get module's name
+        let (subname, in_head) =
+            self.get_block_name_internal(ParseWarningKind::ModuleMissingName)?;
+
+        // Get arguments and end of block
+        let arguments = self.get_head_map(block_rule, in_head)?;
+
+        Ok((subname, arguments))
     }
 
     pub fn get_head_value<F, T>(

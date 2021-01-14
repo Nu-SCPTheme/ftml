@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/mapping.rs
+ * parse/rule/impls/block/blocks/module/mapping.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -18,54 +18,54 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::{blocks::*, BlockRule};
+use super::{modules::*, ModuleRule};
 use std::collections::HashMap;
 use unicase::UniCase;
 
-pub const BLOCK_RULES: [BlockRule; 6] = [
-    BLOCK_CODE,
-    BLOCK_COLLAPSIBLE,
-    BLOCK_CSS,
-    BLOCK_DIV,
-    BLOCK_LINES,
-    BLOCK_MODULE,
+pub const MODULE_RULES: [ModuleRule; 6] = [
+    MODULE_BACKLINKS,
+    MODULE_CATEGORIES,
+    MODULE_CSS,
+    MODULE_JOIN,
+    MODULE_PAGE_TREE,
+    MODULE_RATE,
 ];
 
-pub type BlockRuleMap = HashMap<UniCase<&'static str>, &'static BlockRule>;
+pub type ModuleRuleMap = HashMap<UniCase<&'static str>, &'static ModuleRule>;
 
 lazy_static! {
-    pub static ref BLOCK_RULE_MAP: BlockRuleMap = build_block_rule_map(&BLOCK_RULES);
+    pub static ref MODULE_RULE_MAP: ModuleRuleMap = build_module_rule_map(&MODULE_RULES);
 }
 
 #[inline]
-pub fn get_block_rule_with_name(name: &str) -> Option<&'static BlockRule> {
+pub fn get_module_rule_with_name(name: &str) -> Option<&'static ModuleRule> {
     let name = UniCase::ascii(name);
 
-    BLOCK_RULE_MAP.get(&name).copied()
+    MODULE_RULE_MAP.get(&name).copied()
 }
 
-fn build_block_rule_map(block_rules: &'static [BlockRule]) -> BlockRuleMap {
+fn build_module_rule_map(module_rules: &'static [ModuleRule]) -> ModuleRuleMap {
     let mut map = HashMap::new();
 
-    for block_rule in block_rules {
+    for module_rule in module_rules {
         assert!(
-            block_rule.name.starts_with("block-"),
-            "Block name does not start with 'block-'.",
+            module_rule.name.starts_with("module-"),
+            "Module name does not start with 'module-'.",
         );
 
         assert_eq!(
-            block_rule.accepts_names.is_empty(),
+            module_rule.accepts_names.is_empty(),
             false,
-            "Rule has no accepted names",
+            "Module has no accepted names",
         );
 
-        for name in block_rule.accepts_names {
+        for name in module_rule.accepts_names {
             let name = UniCase::ascii(*name);
-            let previous = map.insert(name, block_rule);
+            let previous = map.insert(name, module_rule);
 
             assert!(
                 previous.is_none(),
-                "Overwrote previous block rule during rule population!",
+                "Overwrote previous module rule during rule population!",
             );
         }
     }
@@ -74,6 +74,6 @@ fn build_block_rule_map(block_rules: &'static [BlockRule]) -> BlockRuleMap {
 }
 
 #[test]
-fn block_rule_map() {
-    let _ = &*BLOCK_RULE_MAP;
+fn module_rule_map() {
+    let _ = &*MODULE_RULE_MAP;
 }

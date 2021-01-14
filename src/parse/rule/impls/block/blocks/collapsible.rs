@@ -19,7 +19,7 @@
  */
 
 use super::prelude::*;
-use crate::parse::{parse_boolean, ParseWarning, ParseWarningKind};
+use crate::parse::{ParseWarning, ParseWarningKind};
 
 pub const BLOCK_COLLAPSIBLE: BlockRule = BlockRule {
     name: "block-collapsible",
@@ -43,10 +43,7 @@ fn parse_fn<'r, 't>(
     );
 
     assert_eq!(special, false, "Collapsible doesn't allow special variant");
-    assert!(
-        name.eq_ignore_ascii_case("collapsible"),
-        "Collapsible doesn't have a valid name",
-    );
+    assert_block_name(&BLOCK_COLLAPSIBLE, name);
 
     let mut arguments = parser.get_head_map(&BLOCK_COLLAPSIBLE, in_head)?;
 
@@ -60,23 +57,9 @@ fn parse_fn<'r, 't>(
     let hide_text = arguments.get("hide");
 
     // Get folding arguments
-    let start_open = match arguments.get("folded") {
-        Some(value) => {
-            // Parse this argument as bool
-            //
-            // Also invert the result, "folded=yes" means "start_open=no".
-            match parse_boolean(value) {
-                Ok(value) => !value,
-                Err(_) => {
-                    return Err(
-                        parser.make_warn(ParseWarningKind::BlockMalformedArguments)
-                    )
-                }
-            }
-        }
-        None => false,
-    };
-
+    //
+    // We invert this first argument since "folded=no" means "start_open=yes"
+    let start_open = !arguments.get_bool(parser, "folded")?.unwrap_or(true);
     let (show_top, show_bottom) = match arguments.get("hideLocation") {
         Some(value) => parse_hide_location(&value, parser)?,
         None => (true, false),

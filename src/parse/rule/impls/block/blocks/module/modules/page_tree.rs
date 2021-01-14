@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/blocks/code.rs
+ * parse/rule/impls/block/blocks/module/modules/page_tree.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -20,11 +20,9 @@
 
 use super::prelude::*;
 
-pub const BLOCK_CODE: BlockRule = BlockRule {
-    name: "block-code",
-    accepts_names: &["code"],
-    accepts_special: false,
-    newline_separator: true,
+pub const MODULE_PAGE_TREE: ModuleRule = ModuleRule {
+    name: "module-page-tree",
+    accepts_names: &["PageTree"],
     parse_fn,
 };
 
@@ -32,22 +30,18 @@ fn parse_fn<'r, 't>(
     log: &slog::Logger,
     parser: &mut Parser<'r, 't>,
     name: &'t str,
-    special: bool,
-    in_head: bool,
-) -> ParseResult<'r, 't, Element<'t>> {
-    debug!(log, "Parsing code block"; "in-head" => in_head);
+    mut arguments: Arguments<'t>,
+) -> ParseResult<'r, 't, Module<'t>> {
+    debug!(log, "Parsing PageTree module");
+    assert_module_name(&MODULE_PAGE_TREE, name);
 
-    assert_eq!(special, false, "Code doesn't allow special variant");
-    assert_block_name(&BLOCK_CODE, name);
+    let root = arguments.get("root");
+    let depth = arguments.get_value(parser, "depth")?;
+    let show_root = arguments.get_bool(parser, "showRoot")?.unwrap_or(false);
 
-    let mut arguments = parser.get_head_map(&BLOCK_CODE, in_head)?;
-    let language = arguments.get("type");
-
-    let code = parser.get_body_text(&BLOCK_CODE)?;
-    let element = Element::Code {
-        contents: cow!(code),
-        language,
-    };
-
-    ok!(element)
+    ok!(Module::PageTree {
+        root,
+        show_root,
+        depth
+    })
 }

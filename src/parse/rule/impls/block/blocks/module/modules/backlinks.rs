@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/blocks/code.rs
+ * parse/rule/impls/block/blocks/module/modules/backlinks.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -20,34 +20,22 @@
 
 use super::prelude::*;
 
-pub const BLOCK_CODE: BlockRule = BlockRule {
-    name: "block-code",
-    accepts_names: &["code"],
-    accepts_special: false,
-    newline_separator: true,
+pub const MODULE_BACKLINKS: ModuleRule = ModuleRule {
+    name: "module-backlinks",
+    accepts_names: &["Backlinks"],
     parse_fn,
 };
 
 fn parse_fn<'r, 't>(
     log: &slog::Logger,
-    parser: &mut Parser<'r, 't>,
+    _parser: &mut Parser<'r, 't>,
     name: &'t str,
-    special: bool,
-    in_head: bool,
-) -> ParseResult<'r, 't, Element<'t>> {
-    debug!(log, "Parsing code block"; "in-head" => in_head);
+    mut arguments: Arguments<'t>,
+) -> ParseResult<'r, 't, Module<'t>> {
+    debug!(log, "Parsing backlinks module");
+    assert_module_name(&MODULE_BACKLINKS, name);
 
-    assert_eq!(special, false, "Code doesn't allow special variant");
-    assert_block_name(&BLOCK_CODE, name);
+    let page = arguments.get("page");
 
-    let mut arguments = parser.get_head_map(&BLOCK_CODE, in_head)?;
-    let language = arguments.get("type");
-
-    let code = parser.get_body_text(&BLOCK_CODE)?;
-    let element = Element::Code {
-        contents: cow!(code),
-        language,
-    };
-
-    ok!(element)
+    ok!(Module::Backlinks { page })
 }

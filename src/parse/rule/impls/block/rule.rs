@@ -129,7 +129,7 @@ where
     // Get block name
     parser.get_optional_space()?;
 
-    let (name, in_block) = parser.get_block_name()?;
+    let (name, in_head) = parser.get_block_name()?;
 
     // Get the block rule for this name
     let block = match get_block_rule_with_name(name) {
@@ -147,8 +147,9 @@ where
     parser.get_optional_space()?;
 
     // Run the parse function until the end.
+    //
     // This is responsible for parsing any arguments,
     // and terminating the block (the ']]' token),
-    // then processing the body (if any) and close tag.
-    (block.parse_fn)(log, parser, name, special, in_block)
+    // then processing the body (if any) and tail block.
+    (block.parse_fn)(log, parser, name, special, in_head)
 }

@@ -1,5 +1,5 @@
 /*
- * parse/rule/impls/block/mod.rs
+ * parse/rule/impls/block/blocks/module/mod.rs
  *
  * ftml - Library to parse Wikidot text
  * Copyright (C) 2019-2021 Ammon Smith
@@ -18,57 +18,40 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-//! Meta-rule for all block constructs.
-//!
-//! This matches `[[` or `[[*` and runs the block parsing
-//! against the upcoming tokens in accordance to how the
-//! various blocks define themselves.
-
-use crate::parse::result::ParseResult;
-use crate::parse::rule::Rule;
-use crate::parse::Parser;
-use crate::tree::Element;
-use std::fmt::{self, Debug};
-
-mod arguments;
 mod mapping;
+mod modules;
 mod parser;
 mod rule;
 
-pub mod blocks;
+use super::prelude;
+use crate::parse::rule::impls::block::Arguments;
+use crate::parse::rule::Rule;
+use crate::parse::{ParseResult, Parser};
+use crate::tree::{Element, Module};
+use std::fmt::{self, Debug};
 
-pub use self::arguments::Arguments;
-pub use self::rule::{RULE_BLOCK, RULE_BLOCK_SKIP, RULE_BLOCK_SPECIAL};
+pub use self::rule::BLOCK_MODULE;
 
-/// Define a rule for how to parse a block.
+/// Define a rule for how to parse a module.
 #[derive(Clone)]
-pub struct BlockRule {
-    /// The code name of the block.
+pub struct ModuleRule {
+    /// The code name of the module.
     ///
     /// As this is an internal structure, we can assert the following things:
     /// * It is in kebab-case.
     /// * It is globally unique.
-    /// * It is prefixed with `block-`.
+    /// * It is prefixed with `module-`.
     name: &'static str,
 
-    /// Which names you can use this block with. Case-insensitive.
+    /// Which names you can use this module with. Case-insensitive.
     /// Will panic if empty.
     accepts_names: &'static [&'static str],
 
-    /// Whether this block accepts `*` as a modifier.
-    ///
-    /// For instance, user can be invoked as both
-    /// `[[user aismallard]]` and `[[*user aismallard]]`.
-    accepts_special: bool,
-
-    /// Whether this block wants its head and tail to be separated by newlines.
-    newline_separator: bool,
-
     /// Function which implements the processing for this rule.
-    parse_fn: BlockParseFn,
+    parse_fn: ModuleParseFn,
 }
 
-impl BlockRule {
+impl ModuleRule {
     /// Produces a pseudo parse `Rule` associated with this `BlockRule`.
     ///
     /// It should not be invoked, it is for warning construction.
@@ -79,7 +62,7 @@ impl BlockRule {
             _: &slog::Logger,
             _: &'p mut Parser<'r, 't>,
         ) -> ParseResult<'r, 't, Element<'t>> {
-            panic!("Pseudo rule for this block should not be executed directly!");
+            panic!("Pseudo rule for this module should not be executed directly!");
         }
 
         Rule {
@@ -89,30 +72,26 @@ impl BlockRule {
     }
 }
 
-impl Debug for BlockRule {
+impl Debug for ModuleRule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("BlockRule")
+        f.debug_struct("ModuleRule")
             .field("name", &self.name)
             .field("accepts_names", &self.accepts_names)
-            .field("accepts_special", &self.accepts_special)
-            .field("newline_separator", &self.newline_separator)
             .field("parse_fn", &(self.parse_fn as *const ()))
             .finish()
     }
 }
 
-/// Function pointer type to implement block parsing.
+/// Function pointer type to implement module parsing.
 ///
 /// The arguments are, in order:
 /// * `log` -- `slog::Logger` instance
 /// * `parser` -- `Parser` instance
-/// * `name` -- The name of the block
-/// * `special` -- Whether this block is `[[*` (special) or `[[` (regular)
-/// * `in_head` -- Whether we're still in the block head, or if it's finished
-pub type BlockParseFn = for<'r, 't> fn(
+/// * `name` -- The name of this module
+/// * `arguments` -- The arguments passed into the module
+pub type ModuleParseFn = for<'r, 't> fn(
     &slog::Logger,
     &mut Parser<'r, 't>,
     &'t str,
-    bool,
-    bool,
-) -> ParseResult<'r, 't, Element<'t>>;
+    Arguments<'t>,
+) -> ParseResult<'r, 't, Module<'t>>;

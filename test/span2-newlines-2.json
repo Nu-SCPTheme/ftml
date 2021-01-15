@@ -1,5 +1,5 @@
 {
-    "input": "[[div]]\nApple\n[[/div]]",
+    "input": "[[span]]Banana\nCherry[[/span]]",
     "tree": {
         "elements": [
             {
@@ -8,23 +8,22 @@
                     "type": "paragraph",
                     "elements": [
                         {
-                            "element": "div",
+                            "element": "span",
                             "data": {
                                 "id": null,
                                 "class": null,
                                 "style": null,
                                 "elements": [
                                     {
-                                        "element": "container",
-                                        "data": {
-                                            "type": "paragraph",
-                                            "elements": [
-                                                {
-                                                    "element": "text",
-                                                    "data": "Apple"
-                                                }
-                                            ]
-                                        }
+                                        "element": "text",
+                                        "data": "Banana"
+                                    },
+                                    {
+                                        "element": "line-break"
+                                    },
+                                    {
+                                        "element": "text",
+                                        "data": "Cherry"
                                     }
                                 ]
                             }

@@ -50,6 +50,26 @@ impl AnchorTarget {
     pub fn name(self) -> &'static str {
         self.into()
     }
+
+    #[inline]
+    pub fn html_attr(self) -> &'static str {
+        match self {
+            AnchorTarget::NewTab => "_blank",
+            AnchorTarget::Parent => "_parent",
+            AnchorTarget::Top => "_top",
+            AnchorTarget::Same => "_same",
+        }
+    }
+
+    #[inline]
+    pub fn html_attr_needed(self) -> Option<&'static str> {
+        match self {
+            AnchorTarget::NewTab => Some("_blank"),
+            AnchorTarget::Parent => Some("_parent"),
+            AnchorTarget::Top => Some("_top"),
+            AnchorTarget::Same => None,
+        }
+    }
 }
 
 impl<'a> TryFrom<&'a str> for AnchorTarget {
@@ -95,6 +115,18 @@ impl HeadingLevel {
             HeadingLevel::Six => 6,
         }
     }
+
+    #[inline]
+    pub fn html_tag(self) -> &'static str {
+        match self {
+            HeadingLevel::One => "h1",
+            HeadingLevel::Two => "h2",
+            HeadingLevel::Three => "h3",
+            HeadingLevel::Four => "h4",
+            HeadingLevel::Five => "h5",
+            HeadingLevel::Six => "h6",
+        }
+    }
 }
 
 impl TryFrom<usize> for HeadingLevel {
@@ -112,6 +144,7 @@ impl TryFrom<usize> for HeadingLevel {
         }
     }
 }
+
 impl TryFrom<u8> for HeadingLevel {
     type Error = ();
 

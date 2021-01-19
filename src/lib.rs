@@ -56,10 +56,13 @@ extern crate str_macro;
 extern crate strum;
 extern crate strum_macros;
 extern crate unicase;
+extern crate void;
 extern crate wikidot_normalize;
 
 cfg_if! {
     if #[cfg(test)] {
+        #[macro_use]
+        extern crate maplit;
         extern crate sloggers;
     }
 }
@@ -74,27 +77,30 @@ mod log;
 mod macros;
 
 mod enums;
-mod parse;
 mod preproc;
-mod render;
 mod span_wrap;
 mod text;
-mod tokenize;
 
 pub mod data;
+pub mod includes;
+pub mod parsing;
+pub mod render;
+pub mod tokenizer;
 pub mod tree;
 
 #[cfg(test)]
 pub use self::log::{build_console_logger, build_logger, build_null_logger};
 
-pub use self::parse::{
-    parse, ExtractedToken, ParseOutcome, ParseWarning, ParseWarningKind, Token,
-};
+pub use self::includes::include;
+pub use self::parsing::parse;
 pub use self::preproc::preprocess;
-pub use self::render::*;
-pub use self::tokenize::{tokenize, Tokenization};
+pub use self::tokenizer::{tokenize, Tokenization};
 
 pub mod prelude {
+    pub use super::includes::{include, Includer};
+    pub use super::parsing::{parse, ParseResult, ParseWarning};
+    pub use super::render::Render;
+    pub use super::tokenizer::{tokenize, Tokenization};
     pub use super::tree::{Element, SyntaxTree};
-    pub use super::{data, parse, preprocess, tokenize};
+    pub use super::{data, preprocess};
 }

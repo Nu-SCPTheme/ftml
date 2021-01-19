@@ -57,15 +57,27 @@ While the expanded form of the initialism is never explicitly stated, it is clea
 name similarity to HTML.
 
 ### Usage
-There are three exported functions, which correspond to each of the main steps in the wikitext process.
+There are a couple main exported functions, which correspond to each of the main steps in the wikitext process.
 
-First is `preprocess`, which will perform Wikidot's various minor text substitutions.
+First is `include`, which substitutes all `[[include]]` blocks for their replaced page content. This returns the substituted wikitext as a new string, as long as the names of all the pages that were used. It requires an object that implement `Includer`, which handles the process of retrieving pages and generating missing page messages.
 
-Second is `tokenize`, which takes the input string and returns a wrapper type. This can be `.into()`-ed into a `Vec<ExtractedToken<'t>>` should you want the token extractions it produced. This is used as the input for `parse`.
+Second is `preprocess`, which will perform Wikidot's various minor text substitutions.
+
+Third is `tokenize`, which takes the input string and returns a wrapper type. This can be `.into()`-ed into a `Vec<ExtractedToken<'t>>` should you want the token extractions it produced. This is used as the input for `parse`.
 
 Then, borrowing a slice of said tokens, `parse` consumes them and produces a `SyntaxTree` representing the full structure of the parsed wikitext.
 
+Finally, with the syntax tree you `render` it with whatever `Render` instance you need at the time. Most likely you want `HtmlRender`.
+
 ```rust
+fn include<'t, I, E>(
+    log: &slog::Logger,
+    input: &'t str,
+    includer: I,
+) -> Result<(String, Vec<PageRef<'t>>), E>
+where
+    I: Includer<'t, Error = E>;
+
 fn preprocess(
     log: &slog::Logger,
     text: &mut String,
@@ -96,8 +108,23 @@ store the results in a `struct`.
 // journalled messages are outputted to.
 let log = slog::Logger::root(/* drain */);
 
+// Get an `Includer`.
+//
+// See trait documentation for what this requires, but
+// essentially it is some abstract handle that gets the
+// contents of a page to be included.
+//
+// Two sample includers you could try are `NullIncluder`
+// and `DebugIncluder`.
+let includer = MyIncluderImpl::new();
+
+// Get our source text
+let mut input = "**some** test <<string?>>";
+
+// Substitute page inclusions
+let (mut text, included_pages) = ftml::include(&log, input, includer);
+
 // Perform preprocess substitions
-let mut text = str!("**some** test <<string?>>");
 ftml::preprocess(&log, &mut text);
 
 // Generate token from input text
@@ -121,13 +148,13 @@ let (tree, warnings) = result.into();
 See [`Serialization.md`](Serialization.md).
 
 ### Server
-If you wish to build the `ftml-server` subcrate, use the following:
+If you wish to build the `ftml-http` subcrate, use the following:
 Note that it was primarily designed for UNIX-like platforms, but with
 some minor changes could be modified to work on Windows.
 
 ```sh
-$ cargo build -p ftml-server --release
-$ cargo run -p ftml-server
+$ cargo build -p ftml-http --release
+$ cargo run -p ftml-http
 ```
 
 This will produce an HTTP server which a REST client can query to perform ftml operations.
@@ -142,12 +169,12 @@ Its usage message (produced by adding `-- --help` to the above `cargo run` invoc
 is reproduced below:
 
 ```
-ftml ftml-server v0.3.1 [8a42fccd]
+ftml ftml-http v0.3.1 [8a42fccd]
 Wikijump Team
 REST server to parse and render Wikidot text.
 
 USAGE:
-    ftml-server [FLAGS] [OPTIONS]
+    ftml-http [FLAGS] [OPTIONS]
 
 FLAGS:
     -h, --help         Prints help information.
@@ -169,6 +196,11 @@ $ curl \
     -X POST \
     -H 'Content-Type: application/json' \
     --compressed \
-    --data '{"text": "<your input here>"}' \
-    http://localhost:3865/parse
+    --data '
+{
+    "text": "<your input here>",
+    "callback-url": "http://localhost:8000/included-pages",
+    "missing-include-template": "No page {{ page }} {% if site %}on site {{ site }} {% endif %}exists!"
+}' \
+        http://localhost:3865/parse
 ```

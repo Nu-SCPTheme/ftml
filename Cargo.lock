@@ -542,7 +542,7 @@ dependencies = [
  "str-macro",
  "tera",
  "thiserror",
- "tokio 0.2.24",
+ "tokio 1.0.2",
  "users",
  "warp",
 ]
@@ -2123,7 +2123,6 @@ dependencies = [
  "mio 0.6.23",
  "pin-project-lite 0.1.11",
  "slab",
- "tokio-macros",
 ]
 
 [[package]]
@@ -2139,13 +2138,14 @@ dependencies = [
  "mio 0.7.7",
  "num_cpus",
  "pin-project-lite 0.2.4",
+ "tokio-macros",
 ]
 
 [[package]]
 name = "tokio-macros"
-version = "0.2.6"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e44da00bfc73a25f814cd8d7e57a68a5c31b74b3152a0a1d1f590c97ed06265a"
+checksum = "42517d2975ca3114b22a16192634e8241dc5cc1f130be194645970cc1c371494"
 dependencies = [
  "proc-macro2",
  "quote",

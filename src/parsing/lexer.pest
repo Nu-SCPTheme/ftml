@@ -45,6 +45,7 @@ token = _{
     url |
     identifier |
     email |
+    variable |
     string |
 
     // Alignment
@@ -202,6 +203,12 @@ close_center_align = { "[[/=]]" }
 
 open_justify_align = { "[[==]]" }
 close_justify_align = { "[[/==]]" }
+
+// }}}
+
+// Variable {{{
+
+variable = { "{$" ~ identifier ~ "}" }
 
 // }}}
 

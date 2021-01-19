@@ -77,7 +77,7 @@ pub use self::strikethrough::RULE_STRIKETHROUGH;
 pub use self::strong::RULE_STRONG;
 pub use self::subscript::RULE_SUBSCRIPT;
 pub use self::superscript::RULE_SUPERSCRIPT;
-pub use self::text::RULE_TEXT;
+pub use self::text::{RULE_TEXT, RULE_BAD_TEXT};
 pub use self::todo::RULE_TODO;
 pub use self::underline::RULE_UNDERLINE;
 pub use self::url::RULE_URL;

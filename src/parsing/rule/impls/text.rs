@@ -22,16 +22,32 @@ use super::prelude::*;
 
 pub const RULE_TEXT: Rule = Rule {
     name: "text",
-    try_consume_fn,
+    try_consume_fn: text,
 };
 
-fn try_consume_fn<'p, 'r, 't>(
+pub const RULE_BAD_TEXT: Rule = Rule {
+    name: "text-bad",
+    try_consume_fn: text_bad,
+};
+
+fn text<'p, 'r, 't>(
     log: &slog::Logger,
     parser: &'p mut Parser<'r, 't>,
 ) -> ParseResult<'r, 't, Element<'t>> {
-    debug!(log, "Consuming token as plain text element");
+    let ExtractedToken { slice, token, .. } = parser.current();
 
-    let ExtractedToken { slice, .. } = parser.current();
+    debug!(log, "Consuming token as plain text element"; "token" => token);
+
+    ok!(text!(slice))
+}
+
+fn text_bad<'p, 'r, 't>(
+    log: &slog::Logger,
+    parser: &'p mut Parser<'r, 't>,
+) -> ParseResult<'r, 't, Element<'t>> {
+    let ExtractedToken { slice, token, .. } = parser.current();
+
+    info!(log, "Consuming otherwise invalid token as plain text element"; "token" => token);
 
     ok!(text!(slice))
 }

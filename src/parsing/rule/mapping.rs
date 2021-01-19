@@ -39,9 +39,9 @@ lazy_static! {
             Token::LeftBracketSpecial => vec![RULE_LINK_SINGLE_NEW_TAB],
             Token::RightBracket => vec![RULE_TEXT],
             Token::LeftBlock => vec![RULE_BLOCK],
-            Token::LeftBlockEnd => vec![],
+            Token::LeftBlockEnd => vec![RULE_BAD_TEXT],
             Token::LeftBlockSpecial => vec![RULE_BLOCK_SPECIAL],
-            Token::RightBlock => vec![],
+            Token::RightBlock => vec![RULE_BAD_TEXT],
             Token::DoubleDash => vec![RULE_STRIKETHROUGH, RULE_DASH],
             Token::TripleDash => vec![RULE_HORIZONTAL_RULE],
             Token::ClearFloatNeutral => vec![RULE_TODO], // TODO
@@ -64,16 +64,16 @@ lazy_static! {
             Token::Superscript => vec![RULE_SUPERSCRIPT],
             Token::Subscript => vec![RULE_SUBSCRIPT],
             Token::LeftMonospace => vec![RULE_MONOSPACE],
-            Token::RightMonospace => vec![],
+            Token::RightMonospace => vec![RULE_BAD_TEXT],
             Token::Color => vec![RULE_COLOR],
             Token::Raw => vec![RULE_RAW],
             Token::LeftRaw => vec![RULE_RAW],
-            Token::RightRaw => vec![],
+            Token::RightRaw => vec![RULE_BAD_TEXT],
 
             // Links
             Token::LeftLink => vec![RULE_LINK_TRIPLE],
             Token::LeftLinkSpecial => vec![RULE_LINK_TRIPLE_NEW_TAB],
-            Token::RightLink => vec![],
+            Token::RightLink => vec![RULE_BAD_TEXT],
 
             // Tables
             Token::TableColumn => vec![RULE_TODO], // TODO
@@ -81,13 +81,13 @@ lazy_static! {
 
             // Alignment
             Token::RightAlignOpen => vec![RULE_TODO], // TODO
-            Token::RightAlignClose => vec![],
+            Token::RightAlignClose => vec![RULE_BAD_TEXT],
             Token::LeftAlignOpen => vec![RULE_TODO], // TODO
-            Token::LeftAlignClose => vec![],
+            Token::LeftAlignClose => vec![RULE_BAD_TEXT],
             Token::CenterAlignOpen => vec![RULE_TODO], // TODO
-            Token::CenterAlignClose => vec![],
+            Token::CenterAlignClose => vec![RULE_BAD_TEXT],
             Token::JustifyAlignOpen => vec![RULE_TODO], // TODO
-            Token::JustifyAlignClose => vec![],
+            Token::JustifyAlignClose => vec![RULE_BAD_TEXT],
 
             // Text components
             Token::Identifier => vec![RULE_TEXT],
@@ -97,7 +97,7 @@ lazy_static! {
 
             // Miscellaneous
             Token::LeftComment => vec![RULE_COMMENT],
-            Token::RightComment => vec![],
+            Token::RightComment => vec![RULE_BAD_TEXT],
             Token::InputEnd => vec![RULE_NULL],
 
             // Fallback

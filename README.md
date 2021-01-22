@@ -1,3 +1,7 @@
+# This crate has moved! This repository will no longer be updated.
+
+See https://github.com/scpwiki/wikijump/tree/develop/ftml for its new location.
+
 ## ftml
 
 <p>
